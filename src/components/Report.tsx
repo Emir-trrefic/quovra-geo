@@ -7,6 +7,7 @@ import type { AuditReport, Category } from "@/lib/audit/types";
 import type { Lang } from "@/lib/i18n";
 import { UI } from "@/lib/i18n/ui";
 import { href } from "@/lib/routes";
+import { ComparePanel, type Suggested } from "./ComparePanel";
 import { CopyBlock } from "./CopyBlock";
 import { Icon } from "./Icon";
 import { LeadForm } from "./LeadForm";
@@ -14,7 +15,7 @@ import { ProbePanel } from "./ProbePanel";
 import { ScoreMeter } from "./ScoreMeter";
 
 const ORDER = { fail: 0, warn: 1, pass: 2 } as const;
-type Tab = "fixes" | "pages" | "bots" | "files" | "probe";
+type Tab = "fixes" | "pages" | "bots" | "files" | "probe" | "compare";
 
 export function Report({ report: full, lang }: { report: AuditReport; lang: Lang }) {
   const t = UI[lang].report;
@@ -28,6 +29,7 @@ export function Report({ report: full, lang }: { report: AuditReport; lang: Lang
   const [printing, setPrinting] = useState(false);
   const [shared, setShared] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [rivals, setRivals] = useState<Suggested[] | undefined>();
 
   useEffect(() => {
     setOrigin(location.origin);
@@ -63,6 +65,7 @@ export function Report({ report: full, lang }: { report: AuditReport; lang: Lang
     ...(full.pages?.length ? [["pages", `${t.tabs.pages} (${full.pages.length + 1})`] as [Tab, string]] : []),
     ["bots", t.tabs.bots],
     ["files", t.tabs.files],
+    ["compare", t.tabs.compare],
     ["probe", t.tabs.probe],
   ];
 
@@ -203,8 +206,16 @@ export function Report({ report: full, lang }: { report: AuditReport; lang: Lang
       )}
 
       {tab === "probe" && !printing && (
-        <ProbePanel lang={lang} defaultBrand={report.page.title?.split(/[|\-–—:]/)[0].trim() || host} domain={host} />
+        <ProbePanel
+          lang={lang} defaultBrand={report.page.title?.split(/[|\-–—:]/)[0].trim() || host} domain={host}
+          onCompare={(list) => {
+            setRivals(list);
+            setTab("compare");
+          }}
+        />
       )}
+
+      {tab === "compare" && !printing && <ComparePanel lang={lang} url={report.finalUrl} suggested={rivals} />}
 
       <div className="card upsell no-print">
         <div>

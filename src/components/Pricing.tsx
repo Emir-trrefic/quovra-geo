@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import type { Lang } from "@/lib/i18n";
 import { auditHref } from "@/lib/routes";
-import { type Cell, LANDING } from "@/lib/i18n/landing";
+import { LANDING } from "@/lib/i18n/landing";
+import { type Cell, planHighlights, planRoadmap, planTable } from "@/lib/i18n/plans";
 import { CURRENCIES, type Currency, formatMoney, guessCurrency, PRICES, SETUP_FROM } from "@/lib/pricing";
 import { LeadForm, type LeadPlan } from "./LeadForm";
 
-function CellView({ value, soon }: { value: Cell; soon: string }) {
+function CellView({ value }: { value: Cell }) {
   if (value === true) return <span className="yes" aria-label="✓">✓</span>;
   if (value === false) return <span className="no" aria-label="—">—</span>;
-  if (value === "soon") return <span className="soon-tag">{soon}</span>;
   return <>{value}</>;
 }
 
@@ -60,7 +60,7 @@ export function Pricing({ lang }: { lang: Lang }) {
                 {price.monthly > 0 && <small>{t.perMonth}</small>}
               </div>
               <p className="muted small price-note">{price.monthly > 0 && yearly ? t.billedYearly : " "}</p>
-              <ul>{p.highlights.map((h) => <li key={h}>{h}</li>)}</ul>
+              <ul>{planHighlights(lang, p.id).map((h) => <li key={h}>{h}</li>)}</ul>
               {p.id === "free" ? (
                 <a className="btn ghost" href={auditHref(lang)}>{p.cta}</a>
               ) : open === p.id ? (
@@ -81,15 +81,16 @@ export function Pricing({ lang }: { lang: Lang }) {
               <tr><th />{t.plans.map((p) => <th key={p.id}>{p.name}</th>)}</tr>
             </thead>
             <tbody>
-              {t.table.map(([label, ...cells]) => (
+              {planTable(lang).map(([label, ...cells]) => (
                 <tr key={label}>
                   <td>{label}</td>
-                  {cells.map((c, i) => <td key={i}><CellView value={c} soon={t.soon} /></td>)}
+                  {cells.map((c, i) => <td key={i}><CellView value={c} /></td>)}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="muted small roadmap-note">{planRoadmap(lang)}</p>
       </details>
 
       <div className="service">

@@ -955,3 +955,81 @@ textarea:focus, .field:focus { border-color: var(--blue); box-shadow: 0 0 0 4px 
 .locked-cta .btn { margin-top: 14px; }
 .lock-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: linear-gradient(90deg, #1e63e9, #4f46e5); color: #fff; font: 600 12px/1.6 var(--mono); }
 @media (max-width: 720px) { .locked-files { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Competitor comparison ---------- */
+.compare-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+@media (max-width: 640px) { .compare-inputs { grid-template-columns: 1fr; } }
+.compare-result { margin-top: 24px; }
+.compare-rank { margin: 0 0 14px; }
+.compare-table { min-width: 640px; }
+.compare-table th, .compare-table td { white-space: nowrap; }
+.compare-table th:not(:first-child), .compare-table td:not(:first-child) { text-align: center; }
+.compare-table tr.is-you td { font-weight: 500; background: rgb(37 99 235 / 0.05); }
+.compare-table td.behind { color: var(--fail); }
+.compare-table td.ahead { color: var(--pass); }
+.compare-h { margin: 28px 0 4px; }
+.compare .check { padding-left: 0; padding-right: 0; }
+.compare-strengths { margin: 8px 0 0; padding-left: 22px; }
+.roadmap-note { padding: 12px 16px 4px; margin: 0; }
+
+
+/* =====================================================================
+ * Card hover motion
+ * Cards lift towards the pointer with a deeper blue shadow, a soft spotlight follows the cursor
+ * (PageFX sets --mx / --my on .spot), and icons and list bullets react. Only on devices that can
+ * hover, and never with prefers-reduced-motion.
+ * ===================================================================== */
+.cell, .plan, .inv-tile, .ci-card, .answer-card, .context li {
+  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), border-color 0.25s, background 0.25s;
+}
+.cell-icon { transition: transform 0.45s var(--ease), background 0.3s, color 0.3s; }
+.plan li::before { transition: transform 0.3s var(--ease); }
+.plan .price { transition: color 0.25s; }
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .cell:hover, .plan:hover, .inv-tile:hover, .ci-card:hover {
+    transform: translateY(-6px);
+    border-color: #a9c2ee;
+    box-shadow: 0 2px 4px rgb(10 37 64 / 0.05), 0 30px 54px -26px rgb(30 99 233 / 0.55);
+  }
+  .plan.featured:hover { transform: translateY(-8px) scale(1.01); box-shadow: 0 34px 64px -28px rgb(30 99 233 / 0.7); }
+  .plan:hover .price { color: var(--blue); }
+  .plan:hover li::before { transform: scale(1.5); }
+  .plan:hover li:nth-child(2)::before { transition-delay: 0.04s; }
+  .plan:hover li:nth-child(3)::before { transition-delay: 0.08s; }
+  .plan:hover li:nth-child(4)::before { transition-delay: 0.12s; }
+  .cell.spot::before {
+    display: block;
+    background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgb(30 99 233 / 0.1), transparent 65%);
+  }
+  .cell:hover .cell-icon { transform: translateY(-2px) rotate(-6deg) scale(1.1); }
+  .context li:hover { background: rgb(30 99 233 / 0.04); }
+  .answer-card:hover { transform: translateY(-4px) rotate(-0.4deg); }
+}
+
+
+/* =====================================================================
+ * Page transitions
+ * Moving between pages from the top menu slides the page sideways: going to a page further right
+ * in the menu pushes the current page out to the left and brings the new one in from the right,
+ * and going left does the opposite. The direction comes from the menu order (lib/navTransition),
+ * the menu bar itself stays put. Browsers without cross-document view transitions simply load the
+ * page as before.
+ * ===================================================================== */
+@view-transition { navigation: auto; }
+.site-nav { view-transition-name: site-nav; }
+::view-transition-group(site-nav) { z-index: 10; }
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  mix-blend-mode: normal;
+}
+html:active-view-transition-type(forward)::view-transition-old(root) { animation-name: vt-out-left; }
+html:active-view-transition-type(forward)::view-transition-new(root) { animation-name: vt-in-right; }
+html:active-view-transition-type(back)::view-transition-old(root) { animation-name: vt-out-right; }
+html:active-view-transition-type(back)::view-transition-new(root) { animation-name: vt-in-left; }
+@keyframes vt-out-left { to { transform: translateX(-100%); } }
+@keyframes vt-in-right { from { transform: translateX(100%); } }
+@keyframes vt-out-right { to { transform: translateX(100%); } }
+@keyframes vt-in-left { from { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }

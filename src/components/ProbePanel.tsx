@@ -6,7 +6,13 @@ import { href } from "@/lib/routes";
 import { UI } from "@/lib/i18n/ui";
 import type { ProbeReport } from "@/lib/probe";
 
-export function ProbePanel({ lang, defaultBrand, domain }: { lang: Lang; defaultBrand: string; domain: string }) {
+export function ProbePanel({ lang, defaultBrand, domain, onCompare }: {
+  lang: Lang;
+  defaultBrand: string;
+  domain: string;
+  /** Called with the recommended competitors that have a known website, to compare them with this site. */
+  onCompare?: (sites: { name: string; url: string }[]) => void;
+}) {
   const t = UI[lang].probe;
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [engines, setEngines] = useState<{ id: string; label: string }[]>([]);
@@ -90,8 +96,16 @@ export function ProbePanel({ lang, defaultBrand, domain }: { lang: Lang; default
               <div>
                 <h4>{t.topCompetitors}</h4>
                 <ol className="competitors">
-                  {report.topCompetitors.map((c) => <li key={c.name}>{c.name} <span className="muted">×{c.count}</span></li>)}
+                  {report.topCompetitors.map((c) => (
+                    <li key={c.name}>{c.name} <span className="muted">{c.domain ? `${c.domain} ` : ""}×{c.count}</span></li>
+                  ))}
                 </ol>
+                {onCompare && report.topCompetitors.some((c) => c.domain) && (
+                  <button
+                    type="button" className="btn small" style={{ marginTop: 12 }}
+                    onClick={() => onCompare(report.topCompetitors.filter((c) => c.domain).slice(0, 3).map((c) => ({ name: c.name, url: c.domain! })))}
+                  >{UI[lang].compare.fromProbe}</button>
+                )}
               </div>
             )}
           </div>
