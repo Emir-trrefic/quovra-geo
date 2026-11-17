@@ -955,3 +955,18 @@ textarea:focus, .field:focus { border-color: var(--blue); box-shadow: 0 0 0 4px 
 .locked-cta .btn { margin-top: 14px; }
 .lock-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: linear-gradient(90deg, #1e63e9, #4f46e5); color: #fff; font: 600 12px/1.6 var(--mono); }
 @media (max-width: 720px) { .locked-files { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Competitor comparison ---------- */
+.compare-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+@media (max-width: 640px) { .compare-inputs { grid-template-columns: 1fr; } }
+.compare-result { margin-top: 24px; }
+.compare-rank { margin: 0 0 14px; }
+.compare-table { min-width: 640px; }
+.compare-table th, .compare-table td { white-space: nowrap; }
+.compare-table th:not(:first-child), .compare-table td:not(:first-child) { text-align: center; }
+.compare-table tr.is-you td { font-weight: 500; background: rgb(37 99 235 / 0.05); }
+.compare-table td.behind { color: var(--fail); }
+.compare-table td.ahead { color: var(--pass); }
+.compare-h { margin: 28px 0 4px; }
+.compare .check { padding-left: 0; padding-right: 0; }
+.compare-strengths { margin: 8px 0 0; padding-left: 22px; }

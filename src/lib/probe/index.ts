@@ -26,6 +26,8 @@ export interface ProbeAnswer {
   /** 1-based rank among recommended names, when it could be determined. */
   position: number | null;
   competitors: string[];
+  /** Website the engine gave for each competitor, keyed by competitor name, when it named one. */
+  sites?: Record<string, string>;
   excerpt: string;
 }
 
@@ -49,7 +51,7 @@ export interface ProbeReport {
   /** 95% Wilson confidence interval for shareOfVoice, in percent. */
   confidence: [number, number];
   results: PromptResult[];
-  topCompetitors: { name: string; count: number }[];
+  topCompetitors: { name: string; count: number; domain?: string }[];
 }
 
 /** An AI engine the probe can ask. Each provider (Claude, ChatGPT, Gemini…) implements this. */
@@ -67,8 +69,9 @@ const MODEL = process.env.QUOVRA_PROBE_MODEL ?? "claude-opus-5-5";
 const SYSTEM = `You are a knowledgeable assistant helping someone choose a product, service or provider.
 Answer the way you normally would for a real user. When recommendations are appropriate, recommend
 specific named options. End your answer with a line of the form
-RECOMMENDED: name 1 | name 2 | name 3
-listing the options you recommended, best first (use "RECOMMENDED: none" if you named none).`;
+RECOMMENDED: name 1 (website1.com) | name 2 (website2.com) | name 3
+listing the options you recommended, best first, each with its official website domain in parentheses
+when you know it (use "RECOMMENDED: none" if you named none).`;
 
 export type EngineId = "claude" | "chatgpt";
 
@@ -177,23 +180,46 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+/** A bare hostname from "acme.com", "https://www.acme.com/x" or "www.acme.com.tr", or null when it is not one. */
+export function hostnameOf(raw: string): string | null {
+  const m = /^\s*(?:https?:\/\/)?(?:www\.)?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24})(?::\d+)?(?:[/?#]\S*)?\s*$/i.exec(raw);
+  return m ? m[1].toLowerCase() : null;
+}
+
+/** Splits "Acme Dental (acmedental.com)" into a name and a website. */
+export function splitRecommendation(entry: string): { name: string; domain?: string } {
+  const m = /^(.*?)\s*[(\[]\s*([^()\[\]]+?)\s*[)\]]\s*$/.exec(entry);
+  const domain = m ? hostnameOf(m[2]) : null;
+  if (m && domain && m[1].trim()) return { name: m[1].trim(), domain };
+  const bare = hostnameOf(entry);
+  return bare ? { name: entry.trim(), domain: bare } : { name: entry.trim() };
+}
+
+const sameSite = (a: string, b: string) => a === b || a.endsWith(`.${b}`) || b.endsWith(`.${a}`);
+
 /** Pure analysis of one answer, separated from the API call so it can be unit tested. */
 export function analyzeAnswer(prompt: string, text: string, brand: string, domain?: string): ProbeAnswer {
   const match = text.match(/RECOMMENDED:\s*(.+)\s*$/im);
   const recommended =
     match && !/^none$/i.test(match[1].trim())
-      ? match[1].split("|").map((s) => s.trim()).filter(Boolean)
+      ? match[1].split("|").map((s) => s.trim()).filter(Boolean).map(splitRecommendation)
       : [];
+  const ownHost = domain ? hostnameOf(domain) : null;
   const needles = [normalize(brand), domain ? normalize(domain.replace(/^www\./, "")) : ""].filter(Boolean);
   const hit = (s: string) => needles.some((n) => normalize(s).includes(n));
+  const isUs = (r: { name: string; domain?: string }) =>
+    hit(r.name) || (!!ownHost && !!r.domain && sameSite(r.domain, ownHost));
 
-  const index = recommended.findIndex(hit);
+  const index = recommended.findIndex(isUs);
   const body = match ? text.slice(0, match.index).trim() : text.trim();
+  const others = recommended.filter((r) => !isUs(r)).slice(0, 8);
+  const sites = Object.fromEntries(others.filter((r) => r.domain).map((r) => [r.name, r.domain!]));
   return {
     prompt,
     mentioned: index !== -1 || hit(body),
     position: index === -1 ? null : index + 1,
-    competitors: recommended.filter((r) => !hit(r)).slice(0, 8),
+    competitors: others.map((r) => r.name),
+    ...(Object.keys(sites).length ? { sites } : {}),
     excerpt: body.length > 600 ? `${body.slice(0, 600)}…` : body,
   };
 }
@@ -219,12 +245,13 @@ export function aggregate(brand: string, engine: string, answers: ProbeAnswer[][
   const [lo, hi] = wilson(mentions, total);
 
   // Competitors are merged case-insensitively across all answers.
-  const counts = new Map<string, { name: string; count: number }>();
+  const counts = new Map<string, { name: string; count: number; domain?: string }>();
   for (const a of answers.flat()) {
     for (const c of new Set(a.competitors)) {
       const key = normalize(c);
       const entry = counts.get(key) ?? { name: c, count: 0 };
       entry.count++;
+      entry.domain ??= a.sites?.[c];
       counts.set(key, entry);
     }
   }
