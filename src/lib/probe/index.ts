@@ -70,8 +70,41 @@ specific named options. End your answer with a line of the form
 RECOMMENDED: name 1 | name 2 | name 3
 listing the options you recommended, best first (use "RECOMMENDED: none" if you named none).`;
 
-export function probeEnabled(): boolean {
+export type EngineId = "claude" | "chatgpt";
+
+/** Raised by engines that call a provider over plain HTTP, so the API route can map it to a status. */
+export class ProbeEngineError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+function claudeConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+}
+
+function chatgptConfigured(): boolean {
+  return Boolean(process.env.OPENAI_API_KEY);
+}
+
+/** Engines that have credentials on this server, in display order. */
+export function availableEngines(): { id: EngineId; label: string }[] {
+  const list: { id: EngineId; label: string }[] = [];
+  if (chatgptConfigured()) list.push({ id: "chatgpt", label: "ChatGPT" });
+  if (claudeConfigured()) list.push({ id: "claude", label: "Claude" });
+  return list;
+}
+
+export function probeEnabled(): boolean {
+  return availableEngines().length > 0;
+}
+
+/** Returns the requested engine, or the first configured one when none is requested. */
+export function engineById(id?: string): ProbeEngine {
+  const available = availableEngines();
+  const chosen = available.find((e) => e.id === id) ?? (id ? undefined : available[0]);
+  if (!chosen) throw new Error(`Engine "${id}" is not configured on this server.`);
+  return chosen.id === "chatgpt" ? chatgptEngine() : claudeEngine();
 }
 
 export function claudeEngine(client = new Anthropic()): ProbeEngine {
@@ -90,6 +123,44 @@ export function claudeEngine(client = new Anthropic()): ProbeEngine {
       });
       if (response.stop_reason === "refusal") return "RECOMMENDED: none";
       return response.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+    },
+  };
+}
+
+const OPENAI_MODEL = process.env.QUOVRA_OPENAI_MODEL ?? "gpt-5";
+
+interface OpenAIResponse {
+  output?: { type: string; content?: { type: string; text?: string }[] }[];
+  error?: { message?: string } | null;
+}
+
+/**
+ * ChatGPT through OpenAI's Responses API with the web_search tool enabled, which is
+ * the closest API equivalent of what a ChatGPT user sees when asking for recommendations.
+ */
+export function chatgptEngine(fetchImpl: typeof fetch = fetch, apiKey = process.env.OPENAI_API_KEY): ProbeEngine {
+  return {
+    id: "chatgpt",
+    label: `ChatGPT (${OPENAI_MODEL}, web search)`,
+    async ask(prompt) {
+      const res = await fetchImpl("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          instructions: SYSTEM,
+          input: prompt,
+          tools: [{ type: "web_search" }],
+        }),
+      });
+      if (!res.ok) throw new ProbeEngineError(res.status, `OpenAI request failed (${res.status}).`);
+      const data = (await res.json()) as OpenAIResponse;
+      if (data.error) throw new ProbeEngineError(502, data.error.message ?? "OpenAI error.");
+      return (data.output ?? [])
+        .filter((item) => item.type === "message")
+        .flatMap((item) => item.content ?? [])
+        .map((c) => (c.type === "output_text" ? c.text ?? "" : ""))
+        .join("");
     },
   };
 }
@@ -162,7 +233,7 @@ export function aggregate(brand: string, engine: string, answers: ProbeAnswer[][
   };
 }
 
-export async function runProbe(input: ProbeInput, engine: ProbeEngine = claudeEngine()): Promise<ProbeReport> {
+export async function runProbe(input: ProbeInput, engine: ProbeEngine = engineById()): Promise<ProbeReport> {
   const prompts = input.prompts.map((p) => p.trim()).filter(Boolean).slice(0, MAX_PROMPTS);
   if (!input.brand.trim() || prompts.length === 0) throw new Error("Brand and at least one prompt are required.");
   const runs = Math.min(MAX_RUNS, Math.max(1, input.runs ?? DEFAULT_RUNS));

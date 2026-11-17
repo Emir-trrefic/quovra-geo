@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregate, analyzeAnswer, runProbe, type ProbeEngine } from "@/lib/probe";
+import { aggregate, analyzeAnswer, chatgptEngine, ProbeEngineError, runProbe, type ProbeEngine } from "@/lib/probe";
 import { wilson } from "@/lib/probe/stats";
 
 describe("probe answer analysis", () => {
@@ -63,5 +63,31 @@ describe("runProbe", () => {
     expect(calls).toBe(8);
     expect(report.runsPerPrompt).toBe(4);
     expect(report.shareOfVoice).toBe(50);
+  });
+});
+
+describe("chatgptEngine", () => {
+  it("sends web search requests and joins the message text", async () => {
+    let sent: { url: string; body: Record<string, unknown>; auth: string } | null = null;
+    const fakeFetch = (async (url: string, init: RequestInit) => {
+      sent = { url, body: JSON.parse(String(init.body)), auth: (init.headers as Record<string, string>).authorization };
+      return new Response(JSON.stringify({
+        output: [
+          { type: "web_search_call" },
+          { type: "message", content: [{ type: "output_text", text: "Try Acme.\n" }, { type: "output_text", text: "RECOMMENDED: Acme | Wave" }] },
+        ],
+      }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const text = await chatgptEngine(fakeFetch, "sk-test").ask("best invoicing");
+    expect(text).toBe("Try Acme.\nRECOMMENDED: Acme | Wave");
+    expect(sent!.url).toBe("https://api.openai.com/v1/responses");
+    expect(sent!.auth).toBe("Bearer sk-test");
+    expect(sent!.body).toMatchObject({ input: "best invoicing", tools: [{ type: "web_search" }] });
+  });
+
+  it("raises a typed error on HTTP failures", async () => {
+    const fakeFetch = (async () => new Response("{}", { status: 429 })) as unknown as typeof fetch;
+    await expect(chatgptEngine(fakeFetch, "k").ask("q")).rejects.toBeInstanceOf(ProbeEngineError);
   });
 });

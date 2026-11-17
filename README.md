@@ -60,13 +60,15 @@ curl -X POST localhost:3000/api/audit -H 'content-type: application/json' \
 | `POST /api/audit` | `{ url, lang?: "en" \| "tr", pages?: 1-10, format?: "json" \| "markdown" }`. Results are cached for 10 minutes. |
 | `GET /api/badge?url=example.com` | SVG score badge, CDN-cacheable for a day. |
 | `POST /api/lead` | `{ email, plan, site?, lang? }` → forwarded to `LEAD_WEBHOOK_URL`. |
-| `POST /api/probe` | AI Mention Probe (requires `ANTHROPIC_API_KEY`). |
+| `POST /api/probe` | AI Mention Probe: `{ brand, domain?, prompts[], engine?: "chatgpt" \| "claude" }` (requires `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`). |
 
 ### Environment variables
 
 | Variable | Purpose |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Enables the AI Mention Probe. |
+| `ANTHROPIC_API_KEY` | Enables the Claude engine of the AI Mention Probe. |
+| `OPENAI_API_KEY` | Enables the ChatGPT engine (Responses API with web search). |
+| `QUOVRA_OPENAI_MODEL` | OpenAI model for the probe (default `gpt-5`). |
 | `QUOVRA_PROBE_MODEL` | Model for the probe (default `claude-opus-5-5`). |
 | `QUOVRA_PROBE_RUNS` | Times each probe question is asked (default 3, max 5). |
 | `LEAD_WEBHOOK_URL` | HTTPS endpoint that receives sign-ups as JSON. |
@@ -75,7 +77,7 @@ curl -X POST localhost:3000/api/audit -H 'content-type: application/json' \
 
 ### AI Mention Probe (optional)
 
-Copy `.env.example` to `.env.local` and set `ANTHROPIC_API_KEY`. The probe uses `claude-opus-5-5` at low effort by default; override with `QUOVRA_PROBE_MODEL`.
+Copy `.env.example` to `.env.local` and set `OPENAI_API_KEY` (ChatGPT) and/or `ANTHROPIC_API_KEY` (Claude). The ChatGPT engine uses the Responses API with web search, so answers reflect live search results like ChatGPT does for users. The Claude engine uses `claude-opus-5-5` at low effort by default; override with `QUOVRA_PROBE_MODEL`.
 
 ## Architecture
 
@@ -90,7 +92,7 @@ src/
     sitemap.ts      sitemap parsing and page selection for multi-page scans
     generators.ts   llms.txt / JSON-LD / robots.txt generators
     markdown.ts     shareable Markdown report
-  lib/probe/      AI Mention Probe (Anthropic SDK)
+  lib/probe/      AI Mention Probe (ChatGPT and Claude engines)
   lib/i18n/       language detection + UI dictionary (en, tr)
   app/(en)        English site at /
   app/(tr)/tr     Turkish site at /tr

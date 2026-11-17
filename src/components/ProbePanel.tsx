@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import type { Lang } from "@/lib/i18n";
+import { href } from "@/lib/routes";
 import { UI } from "@/lib/i18n/ui";
 import type { ProbeReport } from "@/lib/probe";
 
 export function ProbePanel({ lang, defaultBrand, domain }: { lang: Lang; defaultBrand: string; domain: string }) {
   const t = UI[lang].probe;
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [engines, setEngines] = useState<{ id: string; label: string }[]>([]);
+  const [engine, setEngine] = useState("");
   const [brand, setBrand] = useState(defaultBrand);
   const [prompts, setPrompts] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,7 +18,11 @@ export function ProbePanel({ lang, defaultBrand, domain }: { lang: Lang; default
   const [report, setReport] = useState<ProbeReport | null>(null);
 
   useEffect(() => {
-    fetch("/api/probe").then((r) => r.json()).then((d) => setEnabled(d.enabled)).catch(() => setEnabled(false));
+    fetch("/api/probe").then((r) => r.json()).then((d) => {
+      setEnabled(d.enabled);
+      setEngines(d.engines ?? []);
+      setEngine(d.engines?.[0]?.id ?? "");
+    }).catch(() => setEnabled(false));
   }, []);
 
   if (enabled === false) {
@@ -23,7 +30,7 @@ export function ProbePanel({ lang, defaultBrand, domain }: { lang: Lang; default
       <div className="card">
         <h3>{t.lockedTitle}</h3>
         <p>{t.lockedBody}</p>
-        <p style={{ marginTop: 14 }}><a className="btn" href="#pricing">{t.seePlans}</a></p>
+        <p style={{ marginTop: 14 }}><a className="btn" href={href("pricing", lang)}>{t.seePlans}</a></p>
       </div>
     );
   }
@@ -37,7 +44,7 @@ export function ProbePanel({ lang, defaultBrand, domain }: { lang: Lang; default
       const res = await fetch("/api/probe", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ brand, domain, prompts: prompts.split("\n") }),
+        body: JSON.stringify({ brand, domain, prompts: prompts.split("\n"), engine: engine || undefined }),
       });
       const data = await res.json();
       if (!res.ok) setError(data.error);
@@ -56,6 +63,14 @@ export function ProbePanel({ lang, defaultBrand, domain }: { lang: Lang; default
         <p>{t.lead}</p>
         <label htmlFor="brand">{t.brand}</label>
         <input id="brand" className="field" value={brand} onChange={(e) => setBrand(e.target.value)} required />
+        {engines.length > 1 && (
+          <>
+            <label htmlFor="engine">{t.engine}</label>
+            <select id="engine" className="field" value={engine} onChange={(e) => setEngine(e.target.value)}>
+              {engines.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+            </select>
+          </>
+        )}
         <label htmlFor="prompts">{t.questions}</label>
         <textarea id="prompts" rows={5} required value={prompts} onChange={(e) => setPrompts(e.target.value)} placeholder={t.placeholder} />
         <p style={{ marginTop: 12 }}>

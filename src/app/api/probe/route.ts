@@ -1,13 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { probeEnabled, runProbe } from "@/lib/probe";
+import { availableEngines, engineById, probeEnabled, ProbeEngineError, runProbe } from "@/lib/probe";
 import { clientKey, rateLimit } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 export async function GET() {
-  return NextResponse.json({ enabled: probeEnabled() });
+  return NextResponse.json({ enabled: probeEnabled(), engines: availableEngines() });
 }
 
 export async function POST(req: Request) {
@@ -17,19 +17,24 @@ export async function POST(req: Request) {
   if (!rateLimit(`probe:${clientKey(req)}`, 5).ok) {
     return NextResponse.json({ error: "Hourly probe limit reached." }, { status: 429 });
   }
-  const body = (await req.json().catch(() => ({}))) as { brand?: unknown; domain?: unknown; prompts?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { brand?: unknown; domain?: unknown; prompts?: unknown; engine?: unknown };
   if (typeof body.brand !== "string" || !Array.isArray(body.prompts)) {
-    return NextResponse.json({ error: "Expected { brand, domain?, prompts[] }." }, { status: 400 });
+    return NextResponse.json({ error: "Expected { brand, domain?, prompts[], engine? }." }, { status: 400 });
   }
   try {
+    const engine = engineById(typeof body.engine === "string" ? body.engine : undefined);
     const report = await runProbe({
       brand: body.brand.slice(0, 80),
       domain: typeof body.domain === "string" ? body.domain.slice(0, 120) : undefined,
       prompts: body.prompts.filter((p): p is string => typeof p === "string").map((p) => p.slice(0, 300)),
-    });
+    }, engine);
     return NextResponse.json(report);
   } catch (err) {
-    if (err instanceof Anthropic.RateLimitError) {
+    if (err instanceof ProbeEngineError) {
+      return err.status === 429
+        ? NextResponse.json({ error: "AI provider is busy, try again shortly." }, { status: 503 })
+        : NextResponse.json({ error: `AI provider error (${err.status}).` }, { status: 502 });
+    } else if (err instanceof Anthropic.RateLimitError) {
       return NextResponse.json({ error: "AI provider is busy, try again shortly." }, { status: 503 });
     } else if (err instanceof Anthropic.APIError) {
       return NextResponse.json({ error: `AI provider error (${err.status}).` }, { status: 502 });
