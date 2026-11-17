@@ -3,7 +3,7 @@ import type { Lang } from "../i18n";
 type Msg<P = void> = P extends void ? () => string : (p: P) => string;
 
 export interface CheckMessages {
-  aiSearch: { title: string; ok: Msg<{ n: number }>; blocked: Msg<{ bots: string }>; fix: string };
+  aiSearch: { title: string; ok: Msg<{ n: number }>; blocked: Msg<{ bots: string }>; unreachable: string; fix: string };
   aiTraining: { title: string; ok: string; blocked: Msg<{ bots: string }>; fix: string };
   llms: { title: string; missing: string; found: Msg<{ noTitle: boolean; noLinks: boolean }>; fix: string };
   sitemap: { title: string; ok: string; missing: string; fix: string };
@@ -35,6 +35,7 @@ const en: CheckMessages = {
     title: "AI search & assistant crawlers can reach you",
     ok: ({ n }) => `All ${n} AI search and user-fetch agents are allowed by robots.txt.`,
     blocked: ({ bots }) => `Blocked: ${bots}. These agents fetch pages to answer users in real time.`,
+    unreachable: "robots.txt answered with a server error. Crawlers treat that as \"disallow everything\" until it loads again.",
     fix: "Remove the Disallow rules for these user agents in robots.txt. Blocking them makes you invisible in their answers.",
   },
   aiTraining: {
@@ -159,6 +160,7 @@ const tr: CheckMessages = {
     title: "Yapay zekâ arama ve asistan botları sitenize erişebiliyor",
     ok: ({ n }) => `${n} yapay zekâ arama ve kullanıcı botunun tamamına robots.txt izin veriyor.`,
     blocked: ({ bots }) => `Engellenenler: ${bots}. Bu botlar kullanıcılara anlık cevap vermek için sayfaları okur.`,
+    unreachable: "robots.txt sunucu hatası döndürdü. Botlar dosya tekrar açılana kadar bunu \"her şey yasak\" olarak yorumlar.",
     fix: "robots.txt dosyasında bu botlar için yazılmış Disallow kurallarını kaldırın. Engellerseniz bu asistanların cevaplarında hiç görünmezsiniz.",
   },
   aiTraining: {

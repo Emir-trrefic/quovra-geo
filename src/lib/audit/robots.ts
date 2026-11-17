@@ -27,7 +27,7 @@ export function parseRobots(txt: string): Group[] {
   let current: Group | null = null;
   let lastWasAgent = false;
 
-  for (const raw of txt.split(/\r?\n/)) {
+  for (const raw of txt.replace(/^\uFEFF/, "").split(/\r\n|\r|\n/)) {
     const line = raw.replace(/#.*$/, "").trim();
     const idx = line.indexOf(":");
     if (idx === -1) continue;
@@ -39,7 +39,9 @@ export function parseRobots(txt: string): Group[] {
         current = { agents: [], rules: [] };
         groups.push(current);
       }
-      current.agents.push(value.toLowerCase());
+      // "Googlebot/2.1" names the product token "googlebot" (RFC 9309 §2.2.1).
+      const token = value.split("/")[0].trim().toLowerCase();
+      if (token) current.agents.push(token);
       lastWasAgent = true;
     } else if ((key === "allow" || key === "disallow") && current) {
       // An empty Disallow means "allow everything" and adds no rule.
@@ -52,7 +54,17 @@ export function parseRobots(txt: string): Group[] {
   return groups;
 }
 
-function ruleMatches(rulePath: string, path: string): boolean {
+/** Decodes %XX escapes that are not reserved characters, so "/%7Euser" and "/~user" compare equal. */
+function normalizePath(p: string): string {
+  return p.replace(/%([0-9a-f]{2})/gi, (all, hex: string) => {
+    const ch = String.fromCharCode(parseInt(hex, 16));
+    return /[A-Za-z0-9\-._~]/.test(ch) ? ch : all.toUpperCase();
+  });
+}
+
+function ruleMatches(rawRule: string, rawPath: string): boolean {
+  const rulePath = normalizePath(rawRule);
+  const path = normalizePath(rawPath);
   const anchored = rulePath.endsWith("$");
   const pattern = rulePath
     .replace(/\$$/, "")
@@ -74,12 +86,17 @@ export function isAllowed(groups: Group[], userAgent: string, path = "/"): boole
   return rules[0].allow;
 }
 
-export function analyzeBots(robotsTxt: string | null): BotAccess[] {
+/**
+ * Access for each AI agent. A missing robots.txt allows everything; one that cannot be fetched because
+ * the server failed (`unreachable`) disallows everything, as RFC 9309 §2.3.1.3 requires of crawlers.
+ */
+export function analyzeBots(robotsTxt: string | null, unreachable = false): BotAccess[] {
   const groups = robotsTxt ? parseRobots(robotsTxt) : [];
-  return AI_BOTS.map((b) => ({ ...b, allowed: isAllowed(groups, b.bot) }));
+  return AI_BOTS.map((b) => ({ ...b, allowed: !unreachable && isAllowed(groups, b.bot) }));
 }
 
 export function sitemapsFromRobots(robotsTxt: string | null): string[] {
   if (!robotsTxt) return [];
-  return [...robotsTxt.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => m[1]);
+  const urls = [...robotsTxt.replace(/^\uFEFF/, "").matchAll(/^\s*sitemap\s*:\s*(\S+)/gim)].map((m) => m[1]);
+  return [...new Set(urls)];
 }

@@ -33,6 +33,8 @@ export interface PageSnapshot {
 
 export interface SiteFiles {
   robotsTxt: string | null;
+  /** robots.txt answered 5xx or 429: RFC 9309 says crawlers must then assume everything is disallowed. */
+  robotsUnreachable?: boolean;
   llmsTxt: string | null;
   /** /llms-full.txt: the site's full content as Markdown, for agents. */
   llmsFullTxt?: string | null;

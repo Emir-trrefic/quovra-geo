@@ -1,7 +1,7 @@
 import type { Lang } from "../i18n";
 import { PAGE_CHECKS, runChecks } from "./checks";
 import { type Doc, jsonLdNodes, load, meta, schemaTypes, visibleText, wordCount } from "./extract";
-import { type FetchOptions, fetchPage, fetchText } from "./fetcher";
+import { type FetchOptions, fetchPage, fetchText, looksLikeHtmlPage } from "./fetcher";
 import { generateJsonLd, generateLlmsTxt, generateRobotsTxt } from "./generators";
 import { analyzeBots, sitemapsFromRobots } from "./robots";
 import { parseSitemap, pickPages } from "./sitemap";
@@ -45,25 +45,30 @@ async function sitemapUrls(origin: URL, robotsTxt: string | null, opts: FetchOpt
   if (candidates.length === 0) candidates.push(new URL("/sitemap.xml", origin).toString());
 
   let found = false;
-  const urls: string[] = [];
+  const urls = new Set<string>();
+  const fetched = new Set<string>();
   // Follow at most one level of sitemap index, and only a few files, to bound crawl cost.
-  const queue = candidates.slice(0, 3);
-  for (let i = 0; i < queue.length && i < 5; i++) {
+  const queue = candidates.slice(0, 3).map((u) => ({ url: u, top: true }));
+  while (queue.length && fetched.size < 5) {
+    const next = queue.shift()!;
     let target: URL;
     try {
-      target = new URL(queue[i], origin);
+      target = new URL(next.url, origin);
     } catch {
       continue;
     }
+    // Gzipped sitemaps arrive as binary; skip them rather than parse noise.
+    if (fetched.has(target.toString()) || /\.gz$/i.test(target.pathname)) continue;
+    fetched.add(target.toString());
     const xml = await fetchText(target, opts);
-    if (!xml) continue;
+    if (!xml || !/<(urlset|sitemapindex)\b/i.test(xml)) continue;
     found = true;
     const parsed = parseSitemap(xml);
-    urls.push(...parsed.urls);
-    if (i < candidates.length) queue.push(...parsed.sitemaps.slice(0, 2));
-    if (urls.length >= 200) break;
+    for (const u of parsed.urls) urls.add(u);
+    if (next.top) queue.push(...parsed.sitemaps.slice(0, 2).map((u) => ({ url: u, top: false })));
+    if (urls.size >= 200) break;
   }
-  return { found, urls };
+  return { found, urls: [...urls] };
 }
 
 async function scanPage(url: string, files: SiteFiles, bots: BotAccess[], opts: AuditOptions): Promise<PageResult> {
@@ -78,6 +83,21 @@ async function scanPage(url: string, files: SiteFiles, bots: BotAccess[], opts: 
     return { url: page.finalUrl, status: page.status, score, grade, issues };
   } catch {
     return { url, status: 0, score: 0, grade: "F", issues: [] };
+  }
+}
+
+/**
+ * Fetches robots.txt. A 5xx or 429 answer means "unreachable", which crawlers must read as disallow-all
+ * (RFC 9309). A 4xx, a soft-404 HTML page or a network error means there are no rules.
+ */
+async function fetchRobots(origin: URL, opts: FetchOptions): Promise<{ txt: string | null; unreachable: boolean }> {
+  try {
+    const res = await fetchPage(new URL("/robots.txt", origin), { timeoutMs: 6_000, ...opts });
+    if (res.status >= 500 || res.status === 429) return { txt: null, unreachable: true };
+    if (res.status < 200 || res.status >= 300 || looksLikeHtmlPage(res.html)) return { txt: null, unreachable: false };
+    return { txt: res.html, unreachable: false };
+  } catch {
+    return { txt: null, unreachable: false };
   }
 }
 
@@ -99,16 +119,17 @@ export async function runAudit(input: string, opts: AuditOptions = {}): Promise<
   const final = new URL(page.finalUrl);
   const origin = new URL(final.origin);
 
-  const [robotsTxt, llmsTxt, llmsFullTxt] = await Promise.all([
-    fetchText(new URL("/robots.txt", origin), opts),
+  const [robots, llmsTxt, llmsFullTxt] = await Promise.all([
+    fetchRobots(origin, opts),
     fetchText(new URL("/llms.txt", origin), opts),
     fetchText(new URL("/llms-full.txt", origin), opts),
   ]);
+  const robotsTxt = robots.txt;
   const sitemap = await sitemapUrls(origin, robotsTxt, opts);
-  const files: SiteFiles = { robotsTxt, llmsTxt, llmsFullTxt, sitemapFound: sitemap.found };
+  const files: SiteFiles = { robotsTxt, robotsUnreachable: robots.unreachable, llmsTxt, llmsFullTxt, sitemapFound: sitemap.found };
 
   const $ = load(page.html);
-  const bots = analyzeBots(robotsTxt);
+  const bots = analyzeBots(robotsTxt, robots.unreachable);
   const checks = runChecks({ $, page, files, bots, lang });
   const summary = summarize(checks);
 
