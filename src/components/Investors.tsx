@@ -52,8 +52,8 @@ const COPY: Record<Lang, {
     ],
     modelTitle: "İş modeli",
     model: [
-      ["Abonelik (SaaS)", "Başlangıç ₺790 · Büyüme ₺1.990 · Ajans ₺5.990 / ay; yurt dışında $24 · $59 · $179 (EUR ve GBP fiyatları da var)"],
-      ["Kurulum hizmeti", "Tek seferlik ₺4.900'den başlayan anahtar teslim düzeltme"],
+      ["Abonelik (SaaS)", "Başlangıç ₺1.990 · Büyüme ₺4.990 · Ajans ₺14.990 / ay; yurt dışında $39 · $99 · $299 (EUR ve GBP fiyatları da var). Tam kullanımda brüt kâr %60'ın üzerinde."],
+      ["Kurulum hizmeti", "Tek seferlik ₺9.990'dan başlayan anahtar teslim düzeltme"],
       ["Veri ve API", "Sektör endeksleri ve kıyaslama verisi (yol haritası)"],
       ["Hedef birim ekonomisi", "Brüt marj %75+, edinme maliyetinin 6 ayda geri dönmesi"],
     ],
@@ -105,8 +105,8 @@ const COPY: Record<Lang, {
     ],
     modelTitle: "Business model",
     model: [
-      ["Subscription (SaaS)", "Starter $24 · Growth $59 · Agency $179 per month, also priced in EUR, GBP and TRY"],
-      ["Done-for-you setup", "One-time implementation from $149"],
+      ["Subscription (SaaS)", "Starter $39 · Growth $99 · Agency $299 per month, also priced in EUR, GBP and TRY. Gross margin above 60% even at full usage."],
+      ["Done-for-you setup", "One-time implementation from $199"],
       ["Data and API", "Sector indexes and benchmark data (roadmap)"],
       ["Target unit economics", "75%+ gross margin, CAC payback under 6 months"],
     ],
