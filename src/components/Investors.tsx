@@ -131,7 +131,7 @@ export function Investors({ lang }: { lang: Lang }) {
   const t = COPY[lang];
   return (
     <>
-      <SiteNav lang={lang} home={false} />
+      <SiteNav lang={lang} page="investors" />
       <main className="inv">
         <section className="inv-hero">
           <div className="container">

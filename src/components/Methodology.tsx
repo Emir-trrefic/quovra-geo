@@ -72,7 +72,7 @@ export function Methodology({ lang }: { lang: Lang }) {
   const checks = checkCatalog(lang);
   return (
     <>
-      <SiteNav lang={lang} home={false} />
+      <SiteNav lang={lang} page="method" />
       <main className="container narrow doc">
         <p className="kicker">{t.kicker}</p>
         <h1>{t.title}</h1>

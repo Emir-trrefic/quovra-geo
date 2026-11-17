@@ -1,12 +1,12 @@
 import "../globals.css";
 import { buildMetadata } from "@/lib/site";
-import { display, mono, sans } from "../fonts";
+import { mono, sans } from "../fonts";
 
 export const metadata = buildMetadata("en");
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${display.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );

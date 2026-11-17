@@ -4,18 +4,18 @@ import { REPO_URL } from "@/lib/site";
 import { Logo } from "./Logo";
 
 export function SiteFooter({ lang }: { lang: Lang }) {
-  const t = LANDING[lang];
+  const t = LANDING[lang].footer;
   return (
     <footer className="site-footer">
       <div className="container footer-grid">
         <div className="footer-brand">
           <Logo href={lang === "tr" ? "/tr" : "/"} />
-          <p>{t.footer.tagline}</p>
+          <p>{t.tagline}</p>
           <a className="made-by" href="https://softmain.com.tr" target="_blank" rel="noopener">
-            {lang === "tr" ? <><strong>softmain</strong> {t.footer.madeBy}</> : <>{t.footer.madeBy} <strong>softmain</strong></>}
+            {lang === "tr" ? <><strong>softmain</strong> {t.madeBy}</> : <>{t.madeBy} <strong>softmain</strong></>}
           </a>
         </div>
-        {t.pro.footerCols.map((col) => (
+        {t.cols.map((col) => (
           <div key={col.title}>
             <h4>{col.title}</h4>
             <ul>
@@ -26,9 +26,11 @@ export function SiteFooter({ lang }: { lang: Lang }) {
           </div>
         ))}
       </div>
-      <div className="container footer-bottom">
-        <span>© {new Date().getFullYear()} Quovra</span>
-        <span>{t.footer.legal}</span>
+      <div className="container">
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} Quovra</span>
+          <span>{t.legal}</span>
+        </div>
       </div>
     </footer>
   );

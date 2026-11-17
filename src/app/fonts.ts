@@ -1,6 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
 
-// One clean family, used the way Apple uses SF Pro: tight display sizes, relaxed text sizes.
-export const sans = Geist({ subsets: ["latin", "latin-ext"], variable: "--font-sans" });
-export const display = Geist({ subsets: ["latin", "latin-ext"], variable: "--font-display" });
-export const mono = Geist_Mono({ subsets: ["latin", "latin-ext"], variable: "--font-mono" });
+// latin-ext carries the Turkish letters (ı, İ, ş, ğ) in both families.
+export const sans = Geist({ subsets: ["latin", "latin-ext"], weight: ["400", "500", "600", "700"], variable: "--font-sans" });
+export const mono = Geist_Mono({ subsets: ["latin", "latin-ext"], weight: ["400", "500"], variable: "--font-mono" });

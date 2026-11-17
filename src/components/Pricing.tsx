@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Lang } from "@/lib/i18n";
+import { auditHref } from "@/lib/routes";
 import { type Cell, LANDING } from "@/lib/i18n/landing";
 import { CURRENCIES, type Currency, formatMoney, guessCurrency, PRICES, SETUP_FROM } from "@/lib/pricing";
 import { LeadForm, type LeadPlan } from "./LeadForm";
@@ -61,7 +62,7 @@ export function Pricing({ lang }: { lang: Lang }) {
               <p className="muted small price-note">{price.monthly > 0 && yearly ? t.billedYearly : " "}</p>
               <ul>{p.highlights.map((h) => <li key={h}>{h}</li>)}</ul>
               {p.id === "free" ? (
-                <a className="btn ghost" href="#top">{p.cta}</a>
+                <a className="btn ghost" href={auditHref(lang)}>{p.cta}</a>
               ) : open === p.id ? (
                 <LeadForm lang={lang} plan={p.id as LeadPlan} />
               ) : (

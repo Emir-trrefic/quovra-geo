@@ -94,7 +94,7 @@ export function Guide({ lang }: { lang: Lang }) {
   const home = lang === "tr" ? "/tr" : "/";
   return (
     <>
-      <SiteNav lang={lang} home={false} />
+      <SiteNav lang={lang} page="guide" />
       <main className="container guide">
         <header className="guide-head">
           <p className="kicker">{t.kicker}</p>

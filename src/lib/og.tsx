@@ -4,25 +4,22 @@ import { LANDING } from "./i18n/landing";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
-/** Share image in the Softmain family: icy background, navy orb with a blue rim, blue dot wordmark. */
+/** Share image: deep midnight ground, a cobalt glow, white type and a cyan dot, matching the site. */
 export function ogImage(lang: Lang) {
   const t = LANDING[lang].hero;
-  const ink = "#0a192f";
-  const blue = "#3b82f6";
+  const accent = "#5ee0ff";
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: "64px 72px", background: "#f8fafc", color: ink, position: "relative" }}>
-        <div style={{ position: "absolute", width: 560, height: 560, right: -170, top: -260, borderRadius: 9999, background: "#03080f", boxShadow: `inset -14px 24px 50px ${blue}, 0 0 90px rgba(59,190,252,0.35)` }} />
-        <div style={{ display: "flex", alignItems: "flex-start", fontSize: 58, fontWeight: 900, letterSpacing: -3 }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: "72px 80px", background: "radial-gradient(ellipse at 78% 0%, rgba(47,107,255,0.42), rgba(6,9,19,0) 62%), #060913", color: "#f2f5fb" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", fontSize: 48, fontWeight: 700, letterSpacing: -2 }}>
           quovra
-          <div style={{ width: 14, height: 14, borderRadius: 9999, background: blue, marginLeft: 4, marginTop: 8 }} />
+          <div style={{ width: 10, height: 10, borderRadius: 9999, background: accent, marginLeft: 4, marginTop: 6 }} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 76, fontSize: 82, lineHeight: 1.02, letterSpacing: -4, fontWeight: 900 }}>
-          <span>{t.titleA}</span>
-          <span style={{ color: "#2563eb" }}>{t.titleB}</span>
+        <div style={{ display: "flex", marginTop: 72, fontSize: 64, lineHeight: 1.1, letterSpacing: -2, fontWeight: 600, maxWidth: 1000 }}>
+          {t.title}
         </div>
-        <div style={{ display: "flex", marginTop: "auto", fontSize: 20, letterSpacing: 6, color: "#687a8d", fontWeight: 700 }}>
-          {"CHATGPT · GEMINI · CLAUDE · PERPLEXITY  —  BY SOFTMAIN"}
+        <div style={{ display: "flex", marginTop: "auto", paddingTop: 24, borderTop: "1px solid #1b2744", fontSize: 22, letterSpacing: 2, color: "#a3b0c8" }}>
+          {"22 CHECKS  ·  14 AI AGENTS  ·  95% CONFIDENCE INTERVALS  ·  AGPL-3.0"}
         </div>
       </div>
     ),

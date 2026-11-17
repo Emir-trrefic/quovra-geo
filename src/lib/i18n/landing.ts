@@ -1,3 +1,4 @@
+import type { Category } from "../audit/types";
 import type { Lang } from "./index";
 
 export type Cell = boolean | string;
@@ -11,7 +12,7 @@ export interface Plan {
   highlights: string[];
 }
 
-export interface MarketItem {
+export interface ContextItem {
   fact: string;
   title: string;
   body: string;
@@ -19,177 +20,249 @@ export interface MarketItem {
   href: string;
 }
 
+type Status = "pass" | "warn" | "fail";
+
 const en = {
   meta: {
-    title: "Quovra — Get recommended by ChatGPT, Gemini, Claude & Perplexity",
-    description: "Free GEO audit: see how AI assistants see your business, fix what blocks them, and track your share of AI answers with confidence intervals.",
-    ogTitle: "Quovra — AI search visibility, measured properly",
-    ogDescription: "Is ChatGPT recommending you, or your competitor? Find out in 10 seconds.",
+    title: "Quovra — AI search visibility audit and measurement",
+    description: "Open-source GEO toolkit. Audit how AI assistants read your site in 22 checks, get ready-to-ship fixes, and measure share of voice with confidence intervals.",
+    ogTitle: "Quovra — AI search visibility, measured with confidence intervals",
+    ogDescription: "Audit how AI assistants read your site, ship the fixes, and measure the result. Open source.",
   },
-  nav: { product: "Product", solutions: "Solutions", pricing: "Pricing", resources: "Guide", resourcesHref: "/guide", company: "Investors", companyHref: "/investors", guide: "Guide", guideHref: "/guide", method: "Methodology", methodHref: "/methodology", cta: "Run free audit", switchLabel: "TR", switchHref: "/tr" },
+  nav: { product: "Product", solutions: "Who it's for", workflow: "How it works", developers: "Developers", pricing: "Pricing", method: "Methodology", methodHref: "/methodology", cta: "Run free audit", switchLabel: "TR", switchHref: "/tr" },
+  pages: {
+    product: { metaTitle: "Product — Quovra", title: "Check, fix and track how AI sees you.", lead: "Check your site, get the fixes, track your mentions.", description: "Quovra checks how AI assistants read your site in 22 checks, writes the fixes for you and tracks how often ChatGPT and Claude recommend you." },
+    solutions: { metaTitle: "Who it's for — Quovra", title: "For anyone whose customers ask AI.", lead: "If the assistant can't read you, it recommends someone else.", description: "AI visibility for local businesses, e-commerce, agencies and SaaS teams: see if ChatGPT recommends you and fix what it can't read." },
+    workflow: { metaTitle: "How it works — Quovra", title: "From first scan to measured result in four steps.", lead: "Four steps, each with a concrete result.", description: "Scan your site, apply the ready-made fixes, verify the score and measure how often AI assistants recommend you, with confidence intervals." },
+    pricing: { metaTitle: "Pricing — Quovra", title: "Start free. Upgrade when you want proof over time.", lead: "Paid plans are in early access, at launch prices.", description: "Free AI visibility audits, and paid plans for weekly tracking in ChatGPT and Claude. Prices in USD, EUR, GBP and TRY." },
+    developers: { metaTitle: "Developers — Quovra", title: "For developers and technical teams.", lead: "API, CLI and CI. Open source under AGPL-3.0.", description: "Run Quovra's AI visibility audit from an API, the CLI or CI, fail deploys on regressions, and self-host the open-source engine." },
+  },
+  explore: {
+    title: "Find what you need",
+    lead: "",
+    more: "Learn more",
+    items: [
+      { page: "product", icon: "scan", title: "Product", body: "The site check, the ready-made fixes and AI mention tracking." },
+      { page: "solutions", icon: "team", title: "Who it's for", body: "Local businesses, e-commerce, agencies and software teams." },
+      { page: "workflow", icon: "probe", title: "How it works", body: "Four steps from first scan to a result you can trust." },
+      { page: "pricing", icon: "fix", title: "Pricing", body: "Free audits, plans for weekly tracking and a done-for-you setup." },
+    ] as { page: "product" | "solutions" | "workflow" | "pricing"; icon: "scan" | "team" | "probe" | "fix"; title: string; body: string }[],
+  },
   hero: {
-    eyebrow: "Generative Engine Optimization",
-    titleA: "Is ChatGPT recommending you, or ",
-    titleB: "your competitor?",
-    lead: "See how AI assistants see your business, fix what holds you back, and measure the result.",
-    trust: ["No sign-up", "Nothing stored", "Open source"],
+    badge: "Free AI visibility check",
+    badgeNote: "No sign-up",
+    title: "When customers ask AI, does it recommend you?",
+    titleEm: "does it recommend you?",
+    lead: "Quovra shows whether ChatGPT and other assistants can read your site, what to fix, and how often they recommend you.",
+    secondary: "How we measure",
+    trust: ["Open source and transparent", "Reports in English and Turkish", "Never touches your site"],
   },
-  engines: { label: "Works for", list: ["ChatGPT", "Google AI Overviews", "Gemini", "Claude", "Perplexity", "Copilot"] },
-  preview: {
-    badge: "Sample report",
-    site: "smile-dental.example",
-    question: "“Best implant clinic in Istanbul?”",
-    answerLabel: "AI answer (5 runs)",
-    source: "AI answer · 5 runs",
-    answer: ["For implants in Istanbul, the clinics named most often are ", ["Competitor A", 1], " and ", ["Competitor B", 2], ". ", ["Smile Dental", 3], " appears too, but only in one of five answers."] as (string | [string, number])[],
-    you: "you",
-    auditLine: "Site audit",
-    rows: [["Competitor A", "5/5"], ["Competitor B", "4/5"], ["Smile Dental", "1/5"]],
-    sov: "Share of voice 20%",
-    ci: "95% CI 4–62%",
-    checks: [["fail", "ChatGPT search bot blocked"], ["warn", "No FAQ for buyer questions"], ["pass", "Content visible without JavaScript"]],
+  terminal: {
+    file: "zsh",
+    tag: "Illustrative output",
+    replay: "Replay",
+    header: "Quovra GEO audit",
+    checks: [
+      ["FAIL", "llms.txt guide for AI agents", "0/6", "No /llms.txt found.", "Publish /llms.txt: a Markdown summary of who you are with links to your most important pages. Quovra generates one for you."],
+      ["PASS", "Content visible without JavaScript", "10/10", "", ""],
+      ["WARN", "AI search & assistant crawlers can reach you", "7.5/15", "Blocked: OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User. These agents fetch pages to answer users in real time.", "Remove the Disallow rules for these user agents in robots.txt. Blocking them makes you invisible in their answers."],
+    ] as [string, string, string, string, string][],
+    more: "# 19 more checks not shown",
+    blockedLabel: "Blocked AI agents:",
+    blocked: "OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User",
+    gate: "# exit code 1: score 74 is below --min-score=80, the deploy stops",
+    summary: "Animated command-line example: an audit of a fictional site scores 74 out of 100 and the CI gate stops the deploy.",
   },
-  pro: {
-    badge: "AI search visibility platform",
-    title: "Be the brand AI recommends.",
-    lead: "Quovra measures how ChatGPT, Gemini, Claude and Perplexity see your business, fixes what holds you back, and reports the result every week.",
-    secondary: "See how it works",
-    dash: {
-      label: "Example dashboard",
-      site: "smiledental.com",
-      kpis: [["AI visibility score", "91", "+33"], ["Share of voice", "62%", "+42 pts"], ["Questions won", "31/50", "+19"]],
-      chartTitle: "Share of voice, last 8 weeks",
-      you: "You",
-      rival: "Top competitor",
-      enginesTitle: "By engine",
-      engines: [["ChatGPT", 70], ["Gemini", 64], ["Perplexity", 55], ["Claude", 48]],
-    },
-    metricsTitle: "The shift is already happening",
-    features: [
-      { id: "audit", kicker: "Audit", title: "See your site the way AI crawlers do.", body: "22 weighted checks cover access for 14 AI crawlers, content visible without JavaScript, structured data, trust signals and agent readiness.", bullets: ["robots.txt rules for 14 AI agents", "Scans of up to 10 pages", "Shareable report, Markdown and PDF"] },
-      { id: "fix", kicker: "Fix", title: "Every finding becomes code you can ship.", body: "Quovra generates the exact fix: llms.txt, Organization JSON-LD and robots.txt rules, built from your own site.", bullets: ["Copy-paste fixes", "API and CLI for developers", "Integrations for WordPress, Shopify, ikas and Ticimax (soon)"] },
-      { id: "prove", kicker: "Measure", title: "Prove progress with numbers that hold up.", body: "We ask the AI engines your buyers' real questions several times each and report share of voice with a 95% confidence interval.", bullets: ["ChatGPT, Gemini, Claude and Perplexity", "Competitor tracking and alerts", "Weekly trends instead of one-off snapshots"] },
+  answer: {
+    app: "AI assistant",
+    question: "Can you recommend a good dental implant clinic in Istanbul?",
+    intro: "Here are three well-reviewed options:",
+    picks: ["Bright Smile Dental", "Istanbul Implant Center", "Dentalia Clinic"],
+    you: "Your clinic",
+    missing: "not mentioned",
+    note: "Illustrative answer. Quovra measures this with your own customers' questions.",
+  },
+  agents: {
+    label: "robots.txt access checked for {n} AI agents",
+    purpose: { search: "search", "user-fetch": "user fetch", training: "training" } as Record<"search" | "user-fetch" | "training", string>,
+  },
+  sample: {
+    label: "Sample data",
+    site: "smiledental.example",
+    report: "AI visibility report",
+    scope: "10 pages",
+    metrics: [
+      ["AI visibility score", "74", "/100", "Grade B"],
+      ["Checks passed", "14", "/22", "8 need attention, 3 failing"],
+      ["Pages scanned", "10", "", "Site average 71"],
+      ["Share of voice", "20%", "", "95% CI 4–62%, 1 of 5 answers"],
+    ] as [string, string, string, string][],
+    chartTitle: "Points by category",
+    chartUnit: "earned / available",
+    tableTitle: "Findings",
+    tableCount: "5 of 22 checks",
+    cols: ["Check", "Category", "Points", "Status"],
+    rows: [
+      ["AI search & assistant crawlers can reach you", "access", "7.5/15", "warn"],
+      ["llms.txt guide for AI agents", "access", "0/6", "fail"],
+      ["Answers real questions (FAQ)", "structure", "2/4", "warn"],
+      ["Statistics & cited sources", "content", "0/3", "fail"],
+      ["Content visible without JavaScript", "content", "10/10", "pass"],
+    ] as [string, Category, string, Status][],
+    note: "Illustrative data for a fictional site, not a customer result.",
+  },
+  facts: {
+    label: "Key facts",
+    items: [
+      ["22", "checks of what AI can read on your site"],
+      ["14", "AI crawlers checked against your robots.txt"],
+      ["95%", "confidence interval, so changes are real, not noise"],
+      ["45%", "of consumers ask AI for local recommendations"],
+    ] as [string, string][],
+  },
+  why: {
+    kicker: "Why Quovra",
+    title: "Assistants answer from what they can read. If they can't read you, they name someone else.",
+    lead: "An assistant gives one answer with two or three names. Quovra checks if it can reach, understand and trust you.",
+    stages: [
+      ["01", "Crawl", "Can the bot reach you?", "robots.txt · llms.txt · sitemap"],
+      ["02", "Parse", "Can it read the page?", "HTML without JavaScript · JSON-LD · headings"],
+      ["03", "Cite", "Does it have a reason to quote you?", "authorship · statistics · sources · freshness"],
+    ] as [string, string, string, string][],
+    browser: { file: "browser · after JavaScript runs", caption: "What your visitor sees" },
+    crawler: { file: "AI crawler · HTTP response", caption: "What most AI crawlers receive" },
+    browserCode: `<h1>Smile Dental</h1>
+<p>Implant and cosmetic dentistry in Istanbul.</p>
+<ul>
+  <li>Dental implants</li>
+  <li>Teeth whitening</li>
+  <li>212 reviews · 4.8 average</li>
+</ul>`,
+    crawlerCode: `<!doctype html>
+<html lang="en">
+  <body>
+    <div id="root"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>`,
+    verdict: { status: "FAIL", title: "Content visible without JavaScript", points: "0/10", detail: "0 words in the raw HTML." },
+  },
+  capabilities: {
+    title: "Check, fix, track. In plain language.",
+    lead: "Every finding comes with the change that fixes it.",
+    items: [
+      { title: "Site check", body: "Reads your pages like an AI crawler and scores what it can access, understand and trust.", scope: "22 checks · 100 points · up to 10 pages per scan" },
+      { title: "Ready-made fixes", body: "Ready-to-paste llms.txt, structured data and crawler rules. Or let us set them up.", scope: "llms.txt · structured data · robots.txt" },
+      { title: "AI mention tracking", body: "Asks ChatGPT and Claude your customers' questions and shows how often you are recommended.", scope: "ChatGPT · Claude · more engines planned" },
+      { title: "Reports you can share", body: "PDF, share link and score badge. Developers get an API.", scope: "PDF · share link · badge · API" },
     ],
-    solutionsTitle: "Built for teams AI answers decide on",
-    footerCols: [
-      { title: "Product", links: [["Free audit", "#top"], ["Pricing", "#pricing"], ["Methodology", "/methodology"]] },
-      { title: "Solutions", links: [["E-commerce", "#solutions"], ["Local businesses", "#solutions"], ["Agencies", "#solutions"]] },
-      { title: "Resources", links: [["GEO guide", "/guide"], ["GitHub", "REPO"], ["llms.txt", "/llms.txt"]] },
-      { title: "Company", links: [["Investors", "/investors"], ["Softmain", "https://softmain.com.tr"], ["Türkçe", "/tr"]] },
-    ],
   },
-  vision: {
-    kicker: "Our vision",
-    title: "Search is becoming a conversation. We make sure your brand is part of it.",
-    body: "For twenty years, businesses competed for the top of a results page. Now customers ask an AI and get one answer with two or three names. Quovra builds the infrastructure that gets brands found, understood and recommended in that new world, and proves it with numbers.",
-    mission: "Our mission: every brand that deserves to be recommended should be in the answer.",
-    pillars: [
-      { title: "Transparent", body: "Every score traces back to open-source code. No black boxes." },
-      { title: "Evidence-based", body: "Repeated measurements with confidence intervals, not lucky screenshots." },
-      { title: "For everyone", body: "From a single clinic to a global agency, in any language and currency." },
+  workflow: {
+    title: "From first scan to measured result in four steps.",
+    lead: "Four steps, each with a concrete result.",
+    outLabel: "Output:",
+    items: [
+      { step: "Step 1", time: "≈ 10 seconds", file: "terminal", code: `$ npm run audit -- smiledental.example
+Score 74/100  Grade B
+FAIL llms.txt guide for AI agents (0/6)`, title: "Scan", body: "Enter your address. 22 checks in about 10 seconds.", out: "a scored report with fixes" },
+      { step: "Step 2", time: "Your release cycle", file: "public/robots.txt", code: `  User-agent: OAI-SearchBot
+- Disallow: /
++ Allow: /
+  User-agent: PerplexityBot
+- Disallow: /
++ Allow: /`, title: "Fix", body: "Apply the fixes yourself, give them to your web team, or let us do it.", out: "files to review" },
+      { step: "Step 3", time: "Every deploy", file: ".github/workflows/geo.yml", code: `- name: GEO audit
+  run: npm run audit -- smiledental.example --min-score=80
+# exit code 1 below 80: the job fails, the deploy waits`, title: "Verify", body: "Scan again and watch the score move.", out: "before/after score" },
+      { step: "Step 4", time: "On demand", file: "POST /api/probe", code: `{
+  "brand": "Smile Dental",
+  "totalAnswers": 5,
+  "shareOfVoice": 20,
+  "confidence": [4, 62]
+}`, title: "Measure", body: "Ask your customers' questions, several times each.", out: "share of voice, rank and competitors" },
     ],
-  },
-  climb: {
-    kicker: "With Quovra",
-    title: "From the bottom of the list to the top.",
-    lead: "As fixes go live, your position in AI answers climbs week by week.",
-    question: "“Best implant clinic in Istanbul?”",
-    you: "Your brand",
-    others: ["Competitor A", "Competitor B", "Competitor C", "Competitor D"],
-    week: "Week",
-    score: "Visibility score",
-    share: "Share of voice",
-    rank: "Rank",
-    caption: "Illustrative scenario. Results vary by sector, competition and how fixes are applied.",
   },
   code: {
-    kicker: "Under the hood",
-    title: "Not just a report. Working code.",
-    lead: "Every finding ships with the exact fix, and everything is available through an API and a CLI.",
+    title: "Output you can read before you ship it.",
+    lead: "Plain files you can read before you ship them.",
+    caption: "Example output for a fictional site.",
     tabs: { robots: "robots.txt", llms: "llms.txt", jsonld: "JSON-LD", api: "API", cli: "CLI" },
     comments: {
-      robots: "# Before: AI search bots blocked. After: welcomed.",
+      robots: "# Before: AI search bots blocked. After: allowed.",
       llms: "# Generated from your own site, ready to publish at /llms.txt",
-      jsonld: "<!-- Tells AI exactly who you are -->",
+      jsonld: "<!-- States who you are in machine-readable form -->",
       api: "# One request, a full GEO audit back as JSON",
       cli: "# Fail your deploy if AI visibility drops",
     },
   },
-  explain: {
-    kicker: "What is GEO?",
-    title: "SEO gets you clicks. GEO gets you named in the answer.",
-    flow: [
-      { n: "1", title: "A customer asks", body: "“Which clinic is best for implants?”" },
-      { n: "2", title: "The AI reads the web", body: "Its crawlers fetch sites they can access and understand." },
-      { n: "3", title: "It names 2–3 brands", body: "Everyone else is invisible, without ever knowing it." },
-    ],
-    vsTitle: "SEO vs. GEO",
-    vs: [
-      ["Goal", "Rank on a results page", "Be named inside the answer"],
-      ["Reader", "A person scanning links", "An AI choosing sources"],
-      ["Wins with", "Keywords and backlinks", "Access, clear facts, structured data, trust"],
-    ] as [string, string, string][],
-    more: "Read the guide",
+  measure: {
+    kicker: "AI Mention Probe",
+    title: "One AI answer is luck. Many answers are a measurement.",
+    lead: "Answers change from try to try, so every question is asked several times. Move the slider to see why.",
+    demo: {
+      file: "interval, computed live",
+      answers: "Answers collected",
+      mentions: "Answers that name your brand",
+      share: "Share of voice",
+      interval: "95% interval",
+      width: "Interval width",
+      pts: "pts",
+      presets: "Same 20%, more answers",
+      of: "of",
+      note: "Calculated in your browser with the same wilson() function the probe uses.",
+    },
+    codeFile: "src/lib/probe/stats.ts",
+    codeCaption: "The function behind every interval in a report.",
+    points: [
+      ["Asked several times", "Assistants answer differently each time."],
+      ["A range, not a guess", "A narrow range means a real result."],
+      ["Real progress, not noise", "Proof you can show your boss or client."],
+    ] as [string, string][],
   },
-  steps: {
-    kicker: "How it works",
-    title: "Measure. Fix. Prove.",
+  segments: {
+    kicker: "Who it's for",
+    title: "For anyone whose customers ask AI.",
+    lead: "If the assistant can't read you, it recommends someone else.",
+    askLabel: "Your customers ask",
+    planLabel: "Good fit:",
     items: [
-      { n: "01", title: "Measure", body: "22 checks read your site the way AI crawlers do." },
-      { n: "02", title: "Fix", body: "Every issue comes with a fix and ready-to-paste code." },
-      { n: "03", title: "Prove", body: "Repeated AI questions with a 95% confidence interval." },
-    ],
+      { icon: "local", title: "Local businesses", who: "Clinics · restaurants · hotels · lawyers · salons", ask: "\u201cWhich dentist near me is best for implants?\u201d", points: ["See if ChatGPT names you for local questions", "Check that AI can read your address, opening hours and services on your site", "Done-for-you setup if you have no web team"], plan: "Starter + setup service" },
+      { icon: "store", title: "E-commerce", who: "Online stores · brands · D2C", ask: "\u201cWhat's the best running shoe under $100?\u201d", points: ["Check that product data (price, stock, rating) is readable by AI", "Get ready for shopping inside ChatGPT and other assistants", "Track the competitors recommended instead of you"], plan: "Growth" },
+      { icon: "team", title: "Agencies & consultants", who: "SEO · digital · PR agencies, freelancers", ask: "\u201cWhy does ChatGPT recommend our competitor?\u201d", points: ["Win new clients with a free scan as your opening slide", "Sell GEO as a new monthly service", "White-label reports for up to 20 clients (coming soon)"], plan: "Agency" },
+      { icon: "ci", title: "SaaS & developers", who: "Software companies · product and web teams", ask: "\u201cWhat's the best invoicing tool for freelancers?\u201d", points: ["Run the check from an API, the command line or CI", "Fail a deploy when AI visibility drops", "Open source: inspect every check and weight"], plan: "Free CLI + Growth" },
+    ] as { icon: "local" | "store" | "team" | "ci"; title: string; who: string; ask: string; points: string[]; plan: string }[],
   },
-  market: {
-    kicker: "From the market",
-    title: "What is already happening",
+  developers: {
+    title: "For developers and technical teams",
+    lead: "API, CLI and CI. Open source under AGPL-3.0.",
+    items: [
+      ["API and CLI", "POST /api/audit returns JSON or Markdown."],
+      ["CI gate", "--min-score stops a deploy when the score drops."],
+      ["Open scoring", "Every check and weight is in the repo."],
+      ["Safe by design", "Private networks blocked, requests limited, nothing stored."],
+      ["Self-hosting", "Docker image included. Commercial licenses available."],
+    ] as [string, string][],
+  },
+  context: {
+    title: "What is changing in search",
+    lead: "Published figures, linked to their sources.",
     items: [
       { fact: "Feb 2026", title: "Ads arrived in ChatGPT", body: "Sponsored suggestions now sit under answers in the US. Organic mentions get harder to win.", source: "Segwise, 2026", href: "https://segwise.ai/blog/chatgpt-ads-2026-guide.md" },
       { fact: "Shopify · Etsy", title: "Products show up in ChatGPT", body: "These catalogs are included automatically; other stores need crawlable pages or a feed.", source: "Alhena, 2026", href: "https://alhena.ai/blog/chatgpt-shopping-product-feed-guide/" },
       { fact: "133 vs 11", title: "Reviews decide local answers", body: "AI-visible local businesses averaged 133 Google reviews; invisible ones averaged 11.", source: "Insites, 10,000 US businesses", href: "https://www.insites.com/ai-whitepaper" },
       { fact: "45%", title: "Locals ask AI first", body: "Share of consumers using AI for local recommendations, up from 6% a year earlier.", source: "BrightLocal via Local Falcon", href: "https://www.localfalcon.com/blog/the-ai-visibility-crisis-why-83-percent-of-restaurants-dont-exist-in-chatgpt" },
-      { fact: "2.2%", title: "Answers keep changing", body: "Share of ChatGPT citations that stayed the same across three identical runs.", source: "Growth Memo × AirOps", href: "https://www.growth-memo.com/p/how-to-make-prompt-tracking-much" },
-      { fact: "$1.8B", title: "Investors are betting on it", body: "Valuation of Profound, the category leader, after its September 2026 round.", source: "Dealroom", href: "https://dealroom.co/charts/generative-engine-optimization-startups" },
-    ] as MarketItem[],
+    ] as ContextItem[],
   },
-  compare: {
-    kicker: "Why Quovra",
-    title: "Most tools only watch. Quovra measures properly and fixes.",
-    cols: ["Quovra", "Typical trackers", "Asking ChatGPT yourself"],
-    rows: [
-      ["Technical site audit", true, "Partial", false],
-      ["Ready-to-paste fixes", true, "Rarely", "Generic advice"],
-      ["Repeated runs + confidence interval", true, "Single runs", false],
-      ["Agent-readiness checks", true, "Rarely", false],
-      ["Works for any site, in any language", true, "Mostly English", true],
-      ["Starting price", "Free · paid from $24 / €22 / £19", "$29–$500+", "Free, but slow"],
-    ] as [string, Cell, Cell, Cell][],
-    note: "Based on public pricing pages and 2026 tool reviews.",
-  },
-  useCases: {
-    kicker: "Who it is for",
-    title: "Built for businesses AI answers decide on",
-    items: [
-      { id: "ecom", label: "E-commerce", title: "Get products into AI shopping answers", body: "We check every product page for the price, stock, brand and rating data agents compare.", q: "“Best running shoes under $100?”" },
-      { id: "local", label: "Clinics, restaurants, hotels", title: "Be the name AI suggests nearby", body: "We test the questions your patients and guests ask, and tell you what to fix.", q: "“Best implant clinic near me?”" },
-      { id: "agency", label: "Agencies", title: "Add GEO to every retainer", body: "Audit in seconds, send branded reports, prove progress with solid numbers.", q: "“Best B2B SEO agency in Europe?”" },
-      { id: "saas", label: "SaaS & B2B", title: "Make the shortlist", body: "Track whether AI names you when buyers ask for alternatives.", q: "“Alternatives to HubSpot for a small team?”" },
-    ],
-  },
-  future: {
-    kicker: "Coming next",
-    title: "Ready for what AI search becomes",
-    items: [
-      { tag: "Live", title: "Agentic shopping", body: "Product data checks for AI shopping agents." },
-      { tag: "Live", title: "Markdown for agents", body: "llms.txt and llms-full.txt checks." },
-      { tag: "Soon", title: "AI bot analytics", body: "See which AI agents read which pages." },
-      { tag: "Soon", title: "Organic vs. sponsored", body: "Track mentions separately from ChatGPT ads." },
-    ],
+  references: {
+    title: "Reference projects",
+    problem: "Problem",
+    approach: "Approach",
+    result: "Result",
   },
   pricing: {
     kicker: "Pricing",
     title: "Start free. Upgrade when you want proof over time.",
-    lead: "Paid plans are in early access. Join now and keep the launch price for life.",
+    lead: "Paid plans are in early access, at launch prices.",
     monthly: "Monthly",
     yearly: "Yearly",
     save: "2 months free",
@@ -200,11 +273,11 @@ const en = {
       { id: "free", name: "Free", tagline: "Audit any site, any time", cta: "Run a free audit",
         highlights: ["Unlimited single-page audits", "10-page site scans", "Ready-to-paste fixes", "Markdown & PDF reports, badge"] },
       { id: "starter", name: "Starter", tagline: "For one business", cta: "Join early access",
-        highlights: ["1 site · 50 pages monitored", "30 buyer questions", "ChatGPT + Gemini", "Weekly tracking with confidence intervals"] },
+        highlights: ["1 site · 50 pages monitored", "30 buyer questions", "ChatGPT and Claude", "Weekly tracking with confidence intervals"] },
       { id: "growth", name: "Growth", tagline: "For growing brands", featured: true, cta: "Join early access",
-        highlights: ["3 sites · 300 pages", "100 buyer questions", "4 AI engines", "Competitor tracking & AI bot analytics"] },
+        highlights: ["3 sites · 300 pages", "100 buyer questions", "Up to 4 AI engines (planned)", "Competitor tracking & AI bot analytics"] },
       { id: "agency", name: "Agency", tagline: "For agencies & teams", cta: "Join early access",
-        highlights: ["20 client sites · 2,000 pages", "300 buyer questions", "4 AI engines, white-label reports", "API access · 10 seats"] },
+        highlights: ["20 client sites · 2,000 pages", "300 buyer questions", "Up to 4 AI engines (planned), white-label reports", "API access · 10 seats"] },
     ] as Plan[],
     popular: "Most popular",
     tableTitle: "Compare plans",
@@ -214,7 +287,7 @@ const en = {
       ["Sites monitored", "—", "1", "3", "20"],
       ["Pages monitored weekly", "—", "50", "300", "2,000"],
       ["Buyer questions tracked", "3 (one-off demo)", "30", "100", "300"],
-      ["AI engines", "1", "2", "4", "4 (+ more on Enterprise)"],
+      ["AI engines", "1", "ChatGPT, Claude", "Up to 4 (2 live, 2 planned)", "Up to 4 (2 live, 2 planned)"],
       ["Measurement", "One-off", "Weekly", "Weekly", "Weekly + on demand"],
       ["Repeated runs + 95% confidence interval", false, true, true, true],
       ["Competitors tracked", "—", "3", "10", "25 per site"],
@@ -233,20 +306,28 @@ const en = {
   faq: {
     title: "Questions",
     items: [
-      { q: "What is GEO?", a: "Making your business easy for AI assistants to find, understand and recommend. SEO wins clicks; GEO wins the mention inside the answer." },
-      { q: "Why not just ask ChatGPT myself?", a: "Answers change from run to run, so one answer tells you little. Quovra repeats questions, reports a confidence interval and also audits your site technically." },
-      { q: "Do you query the real ChatGPT app?", a: "We use the engines’ official APIs. Results can differ from the apps, so we always show method and confidence." },
-      { q: "Does blocking GPTBot hurt me?", a: "GPTBot is for training; blocking it is a fair choice. Blocking search bots like OAI-SearchBot removes you from live answers." },
-      { q: "Does it work outside Türkiye?", a: "Yes. Quovra audits any public website in any language, the interface is in English and Turkish, and you can pay in USD, EUR, GBP or TRY." },
-      { q: "Is my data stored?", a: "Free audits are not stored. Paid plans keep your results to show trends; you can delete them any time." },
+      { q: "What is GEO?", a: "Generative Engine Optimization: making your site easy for AI assistants to access, parse and cite. SEO competes for a position on a results page; GEO competes to be named inside the answer." },
+      { q: "Why not just ask ChatGPT myself?", a: "One answer is an anecdote. Identical prompts return different answers, so Quovra asks each question several times and reports a confidence interval. It also audits the technical causes: crawler access, rendering and structured data." },
+      { q: "Which AI assistants do you measure?", a: "ChatGPT (with web search, like the app) and Claude today; Gemini, Perplexity and Google AI Overviews are planned. Answers through the API can differ slightly from the consumer apps, which the methodology page states." },
+      { q: "I'm not technical. Can I still use it?", a: "Yes. The report explains every finding in plain language and gives you the exact change. You can hand it to whoever manages your website, or ask us to set it up for you." },
+      { q: "Does blocking GPTBot hurt me?", a: "GPTBot collects training data, so blocking it is a legitimate licensing choice and costs 2 points. Blocking search and user agents such as OAI-SearchBot or ChatGPT-User removes you from live answers and costs up to 15." },
+      { q: "Can I run it on my own infrastructure?", a: "Yes. Quovra is AGPL-3.0 and ships with a Dockerfile. Free audits are processed in memory and not persisted. If you offer a modified version as a network service you must publish your changes; commercial licenses are available." },
+      { q: "Can I use it in CI?", a: "Yes. The CLI exits with code 1 when the score is below --min-score, for example npm run audit -- example.com --min-score=70. The same audit is available as POST /api/audit." },
     ],
   },
-  cta: { title: "See what AI says about you", body: "Free, no sign-up, about 10 seconds.", button: "Run a free audit" },
+  cta: {
+    or: "or",
+    secondary: "Have us fix it for you",
+    title: "Stay visible in the age of AI answers.",
+    body: "Our goal is simple: when your customer asks an assistant, your name is in the answer. We measure your site, fix what holds it back and prove the result.",
+    button: "Run a free audit",
+  },
   footer: {
-    tagline: "AI search visibility, measured properly.",
+    tagline: "Open-source toolkit for AI search visibility.",
     cols: [
-      { title: "Product", links: [["Free audit", "#top"], ["Pricing", "#pricing"], ["Methodology", "/methodology"]] },
-      { title: "Company", links: [["GEO guide", "/guide"], ["Investors", "/investors"], ["GitHub", "REPO"], ["Türkçe", "/tr"]] },
+      { title: "Product", links: [["Free audit", "/#top"], ["Product", "/product"], ["Who it's for", "/solutions"], ["How it works", "/how-it-works"], ["Pricing", "/pricing"]] },
+      { title: "Resources", links: [["GEO guide", "/guide"], ["Methodology", "/methodology"], ["Developers", "/developers"], ["GitHub", "REPO"]] },
+      { title: "Company", links: [["Investors", "/investors"], ["Softmain", "https://softmain.com.tr"], ["Türkçe", "/tr"]] },
     ],
     legal: "Open-source GEO toolkit · AGPL-3.0",
     madeBy: "A product by",
@@ -257,169 +338,240 @@ export type LandingDict = typeof en;
 
 const tr: LandingDict = {
   meta: {
-    title: "Quovra — ChatGPT, Gemini, Claude ve Perplexity sizi önersin",
-    description: "Ücretsiz GEO denetimi: yapay zekâ asistanlarının işletmenizi nasıl gördüğünü görün, engelleri düzeltin, cevaplardaki payınızı güven aralığıyla takip edin.",
-    ogTitle: "Quovra — Yapay zekâ arama görünürlüğü, doğru ölçülmüş",
-    ogDescription: "ChatGPT sizi mi öneriyor, rakibinizi mi? 10 saniyede öğrenin.",
+    title: "Quovra — Yapay zekâ arama görünürlüğü denetimi ve ölçümü",
+    description: "Açık kaynak GEO aracı. Yapay zekâ asistanlarının sitenizi nasıl okuduğunu 22 kontrolle denetler, hazır düzeltmeler üretir, görünürlük payını güven aralığıyla ölçer.",
+    ogTitle: "Quovra — Yapay zekâ arama görünürlüğü, güven aralığıyla ölçülür",
+    ogDescription: "Yapay zekâ asistanlarının sitenizi nasıl okuduğunu denetleyin, düzeltmeleri uygulayın, sonucu ölçün. Açık kaynak.",
   },
-  nav: { product: "Ürün", solutions: "Çözümler", pricing: "Fiyatlar", resources: "Rehber", resourcesHref: "/tr/rehber", company: "Yatırımcılar", companyHref: "/tr/yatirimci", guide: "Rehber", guideHref: "/tr/rehber", method: "Yöntem", methodHref: "/tr/yontem", cta: "Ücretsiz denetle", switchLabel: "EN", switchHref: "/" },
+  nav: { product: "Ürün", solutions: "Kimin için", workflow: "Nasıl çalışır", developers: "Geliştiriciler", pricing: "Fiyatlar", method: "Yöntem", methodHref: "/tr/yontem", cta: "Ücretsiz denetle", switchLabel: "EN", switchHref: "/" },
+  pages: {
+    product: { metaTitle: "Ürün — Quovra", title: "Yapay zekânın sizi nasıl gördüğünü kontrol edin, düzeltin, takip edin.", lead: "Sitenizi kontrol edin, düzeltmeleri alın, anılmanızı takip edin.", description: "Quovra, yapay zekâ asistanlarının sitenizi nasıl okuduğunu 22 kontrolle denetler, düzeltmeleri sizin için yazar ve ChatGPT ile Claude'un sizi ne sıklıkla önerdiğini takip eder." },
+    solutions: { metaTitle: "Kimin için — Quovra", title: "Müşterisi yapay zekâya soran herkes için.", lead: "Asistan sizi okuyamıyorsa başkasını önerir.", description: "Yerel işletmeler, e-ticaret, ajanslar ve yazılım ekipleri için yapay zekâ görünürlüğü: ChatGPT sizi öneriyor mu görün, okuyamadığını düzeltin." },
+    workflow: { metaTitle: "Nasıl çalışır — Quovra", title: "İlk taramadan ölçülmüş sonuca dört adımda.", lead: "Dört adım, her biri somut bir sonuçla.", description: "Sitenizi tarayın, hazır düzeltmeleri uygulayın, puanı doğrulayın ve yapay zekâ asistanlarının sizi ne sıklıkla önerdiğini güven aralığıyla ölçün." },
+    pricing: { metaTitle: "Fiyatlar — Quovra", title: "Ücretsiz başlayın. Zaman içinde kanıt istediğinizde yükseltin.", lead: "Ücretli paketler lansman fiyatıyla erken erişimde.", description: "Ücretsiz yapay zekâ görünürlük denetimi ve ChatGPT ile Claude'da haftalık takip için ücretli paketler. TL, USD, EUR ve GBP fiyatlar." },
+    developers: { metaTitle: "Geliştiriciler — Quovra", title: "Geliştiriciler ve teknik ekipler için.", lead: "API, CLI ve CI. AGPL-3.0 ile açık kaynak.", description: "Quovra'nın yapay zekâ görünürlük denetimini API, CLI ya da CI'dan çalıştırın, gerilemede yayını durdurun, açık kaynak motoru kendi sunucunuzda barındırın." },
+  },
+  explore: {
+    title: "Aradığınızı bulun",
+    lead: "",
+    more: "Devamını okuyun",
+    items: [
+      { page: "product", icon: "scan", title: "Ürün", body: "Site kontrolü, hazır düzeltmeler ve yapay zekâda anılma takibi." },
+      { page: "solutions", icon: "team", title: "Kimin için", body: "Yerel işletmeler, e-ticaret, ajanslar ve yazılım ekipleri." },
+      { page: "workflow", icon: "probe", title: "Nasıl çalışır", body: "İlk taramadan güvenilir sonuca dört adım." },
+      { page: "pricing", icon: "fix", title: "Fiyatlar", body: "Ücretsiz denetim, haftalık takip paketleri ve anahtar teslim kurulum." },
+    ] as { page: "product" | "solutions" | "workflow" | "pricing"; icon: "scan" | "team" | "probe" | "fix"; title: string; body: string }[],
+  },
   hero: {
-    eyebrow: "Üretken Motor Optimizasyonu (GEO)",
-    titleA: "ChatGPT sizi mi öneriyor, yoksa ",
-    titleB: "rakibinizi mi?",
-    lead: "Yapay zekâ asistanlarının işletmenizi nasıl gördüğünü görün, sizi geride tutan sorunları düzeltin, sonucu ölçün.",
-    trust: ["Üyelik yok", "Veri saklanmaz", "Açık kaynak"],
+    badge: "Ücretsiz yapay zekâ görünürlük testi",
+    badgeNote: "Üyelik yok",
+    title: "Müşterileriniz yapay zekâya sorduğunda sizi öneriyor mu?",
+    titleEm: "sizi öneriyor mu?",
+    lead: "Quovra, ChatGPT ve benzeri asistanların sitenizi okuyup okuyamadığını, neyi düzeltmeniz gerektiğini ve sizi ne sıklıkla önerdiklerini gösterir.",
+    secondary: "Nasıl ölçüyoruz?",
+    trust: ["Açık kaynak ve şeffaf", "Türkçe rapor", "Sitenize dokunmaz"],
   },
-  engines: { label: "Desteklenenler", list: ["ChatGPT", "Google AI Overviews", "Gemini", "Claude", "Perplexity", "Copilot"] },
-  preview: {
-    badge: "Örnek rapor",
-    site: "gulus-dis.example",
-    question: "“İstanbul'da en iyi implant kliniği hangisi?”",
-    answerLabel: "Yapay zekâ cevabı (5 tekrar)",
-    source: "Yapay zekâ cevabı · 5 tekrar",
-    answer: ["İstanbul'da implant için en çok anılan klinikler ", ["Rakip A", 1], " ve ", ["Rakip B", 2], ". ", ["Gülüş Diş", 3], " de geçiyor, ama beş cevaptan yalnızca birinde."] as (string | [string, number])[],
-    you: "siz",
-    auditLine: "Site denetimi",
-    rows: [["Rakip A", "5/5"], ["Rakip B", "4/5"], ["Gülüş Diş", "1/5"]],
-    sov: "Görünürlük payı %20",
-    ci: "%95 güven aralığı %4–62",
-    checks: [["fail", "ChatGPT arama botu engelli"], ["warn", "Müşteri soruları için SSS yok"], ["pass", "İçerik JavaScript'siz görünüyor"]],
+  terminal: {
+    file: "zsh",
+    tag: "Örnek çıktı",
+    replay: "Tekrar oynat",
+    header: "Quovra GEO audit",
+    checks: [
+      ["FAIL", "Yapay zekâ ajanları için llms.txt rehberi", "0/6", "/llms.txt bulunamadı.", "/llms.txt yayınlayın: kim olduğunuzu anlatan ve en önemli sayfalarınıza link veren kısa bir Markdown özeti. Quovra sizin için hazırlıyor."],
+      ["PASS", "İçerik JavaScript olmadan görünüyor", "10/10", "", ""],
+      ["WARN", "Yapay zekâ arama ve asistan botları sitenize erişebiliyor", "7.5/15", "Engellenenler: OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User. Bu botlar kullanıcılara anlık cevap vermek için sayfaları okur.", "robots.txt dosyasında bu botlar için yazılmış Disallow kurallarını kaldırın. Engellerseniz bu asistanların cevaplarında hiç görünmezsiniz."],
+    ] as [string, string, string, string, string][],
+    more: "# 19 kontrol daha, burada gösterilmiyor",
+    blockedLabel: "Blocked AI agents:",
+    blocked: "OAI-SearchBot, ChatGPT-User, PerplexityBot, Perplexity-User",
+    gate: "# çıkış kodu 1: puan 74, --min-score=80 eşiğinin altında; dağıtım durur",
+    summary: "Animasyonlu komut satırı örneği: kurgusal bir sitenin denetimi 100 üzerinden 74 puan alır ve CI kapısı dağıtımı durdurur.",
   },
-  pro: {
-    badge: "Yapay zekâ arama görünürlüğü platformu",
-    title: "Yapay zekâ sizi önersin.",
-    lead: "Quovra; ChatGPT, Gemini, Claude ve Perplexity'nin işletmenizi nasıl gördüğünü ölçer, sizi geride tutan sorunları düzeltir ve sonucu her hafta raporlar.",
-    secondary: "Nasıl çalıştığını görün",
-    dash: {
-      label: "Örnek pano",
-      site: "gulusdis.com",
-      kpis: [["Yapay zekâ görünürlük puanı", "91", "+33"], ["Görünürlük payı", "%62", "+42 puan"], ["Kazanılan soru", "31/50", "+19"]],
-      chartTitle: "Görünürlük payı, son 8 hafta",
-      you: "Siz",
-      rival: "En güçlü rakip",
-      enginesTitle: "Motora göre",
-      engines: [["ChatGPT", 70], ["Gemini", 64], ["Perplexity", 55], ["Claude", 48]],
-    },
-    metricsTitle: "Değişim çoktan başladı",
-    features: [
-      { id: "audit", kicker: "Denetim", title: "Sitenizi yapay zekâ botlarının gözüyle görün.", body: "22 ağırlıklı kontrol: 14 yapay zekâ botunun erişimi, JavaScript'siz görünen içerik, yapısal veri, güven sinyalleri ve ajan hazırlığı.", bullets: ["14 yapay zekâ botu için robots.txt analizi", "10 sayfaya kadar site taraması", "Paylaşılabilir rapor, Markdown ve PDF"] },
-      { id: "fix", kicker: "Düzeltme", title: "Her bulgu, uygulanabilir koda dönüşür.", body: "Quovra düzeltmenin kendisini üretir: sitenizden oluşturulan llms.txt, Organization JSON-LD ve robots.txt kuralları.", bullets: ["Kopyala-yapıştır düzeltmeler", "Yazılımcılar için API ve komut satırı aracı", "WordPress, Shopify, ikas ve Ticimax entegrasyonları (yakında)"] },
-      { id: "prove", kicker: "Ölçüm", title: "İlerlemeyi sağlam rakamlarla kanıtlayın.", body: "Müşterilerinizin gerçek sorularını yapay zekâ motorlarına birkaç kez sorar, görünürlük payınızı %95 güven aralığıyla raporlarız.", bullets: ["ChatGPT, Gemini, Claude ve Perplexity", "Rakip takibi ve uyarılar", "Tek seferlik görüntü yerine haftalık trend"] },
+  answer: {
+    app: "Yapay zekâ asistanı",
+    question: "İstanbul'da iyi bir implant kliniği önerir misin?",
+    intro: "Yorumları iyi olan üç seçenek:",
+    picks: ["Parlak Gülüş Diş Kliniği", "İstanbul İmplant Merkezi", "Dentalia Klinik"],
+    you: "Sizin kliniğiniz",
+    missing: "anılmadı",
+    note: "Temsilî cevap. Quovra bunu kendi müşterilerinizin sorularıyla ölçer.",
+  },
+  agents: {
+    label: "{n} yapay zekâ botu için robots.txt erişimi denetlenir",
+    purpose: { search: "arama", "user-fetch": "kullanıcı isteği", training: "eğitim" } as Record<"search" | "user-fetch" | "training", string>,
+  },
+  sample: {
+    label: "Örnek veri",
+    site: "gulusdis.example",
+    report: "Yapay zekâ görünürlük raporu",
+    scope: "10 sayfa",
+    metrics: [
+      ["Yapay zekâ görünürlük puanı", "74", "/100", "Not B"],
+      ["Geçen kontrol", "14", "/22", "8'i dikkat istiyor, 3'ü başarısız"],
+      ["Taranan sayfa", "10", "", "Site ortalaması 71"],
+      ["Görünürlük payı", "%20", "", "%95 güven aralığı %4–62, 5 cevabın 1'i"],
+    ] as [string, string, string, string][],
+    chartTitle: "Kategoriye göre puan",
+    chartUnit: "alınan / toplam",
+    tableTitle: "Bulgular",
+    tableCount: "22 kontrolden 5'i",
+    cols: ["Kontrol", "Kategori", "Puan", "Durum"],
+    rows: [
+      ["Yapay zekâ arama ve asistan botları sitenize erişebiliyor", "access", "7,5/15", "warn"],
+      ["Yapay zekâ ajanları için llms.txt rehberi", "access", "0/6", "fail"],
+      ["Gerçek soruları cevaplıyor (SSS)", "structure", "2/4", "warn"],
+      ["İstatistik ve kaynak gösterme", "content", "0/3", "fail"],
+      ["İçerik JavaScript olmadan görünüyor", "content", "10/10", "pass"],
+    ] as [string, Category, string, Status][],
+    note: "Kurgusal bir site için örnek veridir, müşteri sonucu değildir.",
+  },
+  facts: {
+    label: "Öne çıkan bilgiler",
+    items: [
+      ["22", "kontrolle, yapay zekânın sitenizden ne okuyabildiği"],
+      ["14", "yapay zekâ botu için robots.txt erişim kontrolü"],
+      ["%95", "güven aralığı: değişim gerçek mi, gürültü mü, bilirsiniz"],
+      ["%45", "tüketicinin yerel öneri için yapay zekâya sorma oranı"],
+    ] as [string, string][],
+  },
+  why: {
+    kicker: "Neden Quovra",
+    title: "Asistanlar okuyabildiklerinden cevap verir. Sizi okuyamazlarsa başkasını anarlar.",
+    lead: "Asistan iki üç isimli tek bir cevap verir. Quovra sizi bulup anlayıp güvenebildiğini kontrol eder.",
+    stages: [
+      ["01", "Tara", "Bot size ulaşabiliyor mu?", "robots.txt · llms.txt · site haritası"],
+      ["02", "Ayrıştır", "Sayfayı okuyabiliyor mu?", "JavaScript'siz HTML · JSON-LD · başlıklar"],
+      ["03", "Alıntıla", "Sizi anmak için bir nedeni var mı?", "yazar bilgisi · istatistik · kaynaklar · güncellik"],
+    ] as [string, string, string, string][],
+    browser: { file: "tarayıcı · JavaScript çalıştıktan sonra", caption: "Ziyaretçinizin gördüğü" },
+    crawler: { file: "yapay zekâ botu · HTTP yanıtı", caption: "Yapay zekâ botlarının çoğunun aldığı" },
+    browserCode: `<h1>Gülüş Diş Kliniği</h1>
+<p>İstanbul'da implant ve estetik diş hekimliği.</p>
+<ul>
+  <li>Diş implantı</li>
+  <li>Diş beyazlatma</li>
+  <li>212 yorum · ortalama 4,8</li>
+</ul>`,
+    crawlerCode: `<!doctype html>
+<html lang="tr">
+  <body>
+    <div id="root"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>`,
+    verdict: { status: "FAIL", title: "İçerik JavaScript olmadan görünüyor", points: "0/10", detail: "Ham HTML'de 0 kelime var." },
+  },
+  capabilities: {
+    title: "Kontrol et, düzelt, takip et. Anlaşılır bir dille.",
+    lead: "Her bulgu, onu düzelten değişiklikle gelir.",
+    items: [
+      { title: "Site kontrolü", body: "Sayfalarınızı yapay zekâ botu gibi okur; neye erişip neyi anladığını ve neye güvendiğini puanlar.", scope: "22 kontrol · 100 puan · taramada en fazla 10 sayfa" },
+      { title: "Hazır düzeltmeler", body: "Kopyala-yapıştır llms.txt, yapısal veri ve bot kuralları. Ya da kurulumu bize bırakın.", scope: "llms.txt · yapısal veri · robots.txt" },
+      { title: "Yapay zekâda anılma takibi", body: "Müşteri sorularınızı ChatGPT ve Claude'a sorar, ne sıklıkla önerildiğinizi gösterir.", scope: "ChatGPT · Claude · diğer motorlar planlı" },
+      { title: "Paylaşılabilir raporlar", body: "PDF, paylaşım bağlantısı ve puan rozeti. Geliştiricilere API.", scope: "PDF · paylaşım bağlantısı · rozet · API" },
     ],
-    solutionsTitle: "Yapay zekânın karar verdiği işletmeler için",
-    footerCols: [
-      { title: "Ürün", links: [["Ücretsiz denetim", "#top"], ["Fiyatlar", "#pricing"], ["Yöntem", "/tr/yontem"]] },
-      { title: "Çözümler", links: [["E-ticaret", "#solutions"], ["Yerel işletmeler", "#solutions"], ["Ajanslar", "#solutions"]] },
-      { title: "Kaynaklar", links: [["GEO rehberi", "/tr/rehber"], ["GitHub", "REPO"], ["llms.txt", "/llms.txt"]] },
-      { title: "Şirket", links: [["Yatırımcılar", "/tr/yatirimci"], ["Softmain", "https://softmain.com.tr"], ["English", "/"]] },
-    ],
   },
-  vision: {
-    kicker: "Vizyonumuz",
-    title: "Arama bir sohbete dönüşüyor. Markanızın o sohbette yer almasını sağlıyoruz.",
-    body: "Yirmi yıl boyunca işletmeler arama sonuçlarında üst sıraya çıkmak için yarıştı. Şimdi müşteriler soruyu yapay zekâya soruyor ve içinde iki üç isim geçen tek bir cevap alıyor. Quovra, bu yeni dünyada markaların bulunmasını, anlaşılmasını ve önerilmesini sağlayan altyapıyı kuruyor ve sonucu rakamlarla kanıtlıyor.",
-    mission: "Misyonumuz: Önerilmeyi hak eden her marka, cevabın içinde olmalı.",
-    pillars: [
-      { title: "Şeffaf", body: "Her puan açık kaynak koda dayanır. Kara kutu yok." },
-      { title: "Kanıta dayalı", body: "Şanslı bir ekran görüntüsü değil, güven aralıklı tekrarlı ölçüm." },
-      { title: "Herkes için", body: "Tek bir klinikten küresel bir ajansa, her dilde ve her para biriminde." },
+  workflow: {
+    title: "İlk taramadan ölçülmüş sonuca dört adımda.",
+    lead: "Dört adım, her biri somut bir sonuçla.",
+    outLabel: "Çıktı:",
+    items: [
+      { step: "Adım 1", time: "≈ 10 saniye", file: "terminal", code: `$ npm run audit -- gulusdis.example --lang=tr
+Score 74/100  Grade B
+FAIL Yapay zekâ ajanları için llms.txt rehberi (0/6)`, title: "Tara", body: "Adresinizi girin. 22 kontrol, yaklaşık 10 saniye.", out: "düzeltmeli puan raporu" },
+      { step: "Adım 2", time: "Sürüm döngünüz", file: "public/robots.txt", code: `  User-agent: OAI-SearchBot
+- Disallow: /
++ Allow: /
+  User-agent: PerplexityBot
+- Disallow: /
++ Allow: /`, title: "Düzelt", body: "Düzeltmeleri kendiniz uygulayın, ekibinize verin ya da bize bırakın.", out: "incelenecek dosyalar" },
+      { step: "Adım 3", time: "Her dağıtım", file: ".github/workflows/geo.yml", code: `- name: GEO audit
+  run: npm run audit -- gulusdis.example --min-score=80
+# 80'in altında çıkış kodu 1: iş başarısız olur, dağıtım bekler`, title: "Doğrula", body: "Yeniden tarayın, puanın değiştiğini görün.", out: "öncesi/sonrası puan" },
+      { step: "Adım 4", time: "İstek üzerine", file: "POST /api/probe", code: `{
+  "brand": "Gülüş Diş",
+  "totalAnswers": 5,
+  "shareOfVoice": 20,
+  "confidence": [4, 62]
+}`, title: "Ölç", body: "Müşteri sorularınızı birkaç kez sorun.", out: "görünürlük payı, sıra ve rakipler" },
     ],
-  },
-  climb: {
-    kicker: "Quovra ile",
-    title: "Listenin sonundan zirveye.",
-    lead: "Düzeltmeler yayına girdikçe yapay zekâ cevaplarındaki sıranız haftadan haftaya yükselir.",
-    question: "“İstanbul'da en iyi implant kliniği hangisi?”",
-    you: "Sizin markanız",
-    others: ["Rakip A", "Rakip B", "Rakip C", "Rakip D"],
-    week: "Hafta",
-    score: "Görünürlük puanı",
-    share: "Görünürlük payı",
-    rank: "Sıra",
-    caption: "Temsili senaryodur. Sonuçlar sektöre, rekabete ve düzeltmelerin uygulanmasına göre değişir.",
   },
   code: {
-    kicker: "Kaputun altı",
-    title: "Sadece rapor değil, çalışan kod.",
-    lead: "Her bulgu, uygulanacak düzeltmenin kendisiyle gelir. Hepsi API ve komut satırı aracıyla da kullanılabilir.",
+    title: "Yayına almadan önce okuyabileceğiniz çıktı.",
+    lead: "Yayına almadan önce okuyabileceğiniz düz dosyalar.",
+    caption: "Kurgusal bir site için örnek çıktı.",
     tabs: { robots: "robots.txt", llms: "llms.txt", jsonld: "JSON-LD", api: "API", cli: "CLI" },
     comments: {
-      robots: "# Önce: yapay zekâ arama botları engelli. Sonra: hoş geldiniz.",
+      robots: "# Önce: yapay zekâ arama botları engelli. Sonra: izinli.",
       llms: "# Sitenizden üretildi, /llms.txt adresinde yayınlamaya hazır",
-      jsonld: "<!-- Yapay zekâya kim olduğunuzu tam olarak söyler -->",
+      jsonld: "<!-- Kim olduğunuzu makinelerin okuyabileceği biçimde belirtir -->",
       api: "# Tek istek, JSON olarak tam bir GEO denetimi",
-      cli: "# Yapay zekâ görünürlüğü düşerse yayını durdur",
+      cli: "# Yapay zekâ görünürlüğü düşerse dağıtımı durdur",
     },
   },
-  explain: {
-    kicker: "GEO nedir?",
-    title: "SEO tıklama getirir. GEO, cevabın içinde adınızı geçirir.",
-    flow: [
-      { n: "1", title: "Müşteri sorar", body: "“İmplant için en iyi klinik hangisi?”" },
-      { n: "2", title: "Yapay zekâ web'i okur", body: "Botları erişebildiği ve anlayabildiği siteleri okur." },
-      { n: "3", title: "2–3 marka önerir", body: "Gerisi görünmez kalır, hem de haberi olmadan." },
-    ],
-    vsTitle: "SEO ve GEO farkı",
-    vs: [
-      ["Hedef", "Sonuç sayfasında üst sıra", "Cevabın içinde anılmak"],
-      ["Okuyan", "Linklere bakan insan", "Kaynak seçen yapay zekâ"],
-      ["Kazandıran", "Anahtar kelime ve backlink", "Erişim, net bilgi, yapısal veri, güven"],
-    ] as [string, string, string][],
-    more: "Rehberi oku",
+  measure: {
+    kicker: "AI Mention Probe",
+    title: "Tek bir yapay zekâ cevabı şanstır. Çok sayıda cevap ölçümdür.",
+    lead: "Cevaplar her denemede değişir; bu yüzden her soru birkaç kez sorulur. Farkı görmek için kaydırın.",
+    demo: {
+      file: "aralık, canlı hesaplanır",
+      answers: "Toplanan cevap",
+      mentions: "Markanızı anan cevap",
+      share: "Görünürlük payı",
+      interval: "%95 aralık",
+      width: "Aralık genişliği",
+      pts: "puan",
+      presets: "Aynı %20, daha fazla cevap",
+      of: "/",
+      note: "Probe'un kullandığı wilson() fonksiyonuyla tarayıcınızda hesaplanır.",
+    },
+    codeFile: "src/lib/probe/stats.ts",
+    codeCaption: "Raporlardaki her aralığın arkasındaki fonksiyon.",
+    points: [
+      ["Birkaç kez sorulur", "Asistanlar her seferinde farklı cevap verir."],
+      ["Tahmin değil, aralık", "Dar aralık, gerçek bir sonuç demektir."],
+      ["Gürültü değil, gerçek ilerleme", "Yöneticinize ya da müşterinize gösterebileceğiniz kanıt."],
+    ] as [string, string][],
   },
-  steps: {
-    kicker: "Nasıl çalışır",
-    title: "Ölç. Düzelt. Kanıtla.",
+  segments: {
+    kicker: "Kimin için",
+    title: "Müşterisi yapay zekâya soran herkes için.",
+    lead: "Asistan sizi okuyamıyorsa başkasını önerir.",
+    askLabel: "Müşterileriniz soruyor",
+    planLabel: "Uygun paket:",
     items: [
-      { n: "01", title: "Ölç", body: "22 kontrol sitenizi yapay zekâ botları gibi okur." },
-      { n: "02", title: "Düzelt", body: "Her sorun için çözüm ve yapıştırmaya hazır kod." },
-      { n: "03", title: "Kanıtla", body: "Tekrarlı sorularla %95 güven aralıklı ölçüm." },
-    ],
+      { icon: "local", title: "Yerel işletmeler", who: "Klinik · restoran · otel · avukat · güzellik salonu", ask: "\u201cYakınımda implant için en iyi diş hekimi hangisi?\u201d", points: ["Yerel sorularda ChatGPT'nin sizi anıp anmadığını görün", "Sitenizdeki adres, çalışma saatleri ve hizmet bilgisinin yapay zekâca okunabildiğini kontrol edin", "Web ekibiniz yoksa anahtar teslim kurulum"], plan: "Başlangıç + kurulum hizmeti" },
+      { icon: "store", title: "E-ticaret", who: "Online mağazalar · markalar · D2C", ask: "\u201c2.000 TL altı en iyi koşu ayakkabısı hangisi?\u201d", points: ["Ürün verisinin (fiyat, stok, puan) yapay zekâca okunabildiğini kontrol edin", "ChatGPT ve diğer asistanlarda alışverişe hazırlanın", "Sizin yerinize önerilen rakipleri takip edin"], plan: "Büyüme" },
+      { icon: "team", title: "Ajanslar ve danışmanlar", who: "SEO · dijital · PR ajansları, serbest çalışanlar", ask: "\u201cChatGPT neden rakibimizi öneriyor?\u201d", points: ["Ücretsiz taramayı açılış slaydı yapıp yeni müşteri kazanın", "GEO'yu yeni bir aylık hizmet olarak satın", "20 müşteriye kadar kendi markanızla rapor (yakında)"], plan: "Ajans" },
+      { icon: "ci", title: "SaaS ve geliştiriciler", who: "Yazılım şirketleri · ürün ve web ekipleri", ask: "\u201cSerbest çalışanlar için en iyi fatura programı hangisi?\u201d", points: ["Kontrolü API'den, komut satırından ya da CI'dan çalıştırın", "Yapay zekâ görünürlüğü düşerse yayını durdurun", "Açık kaynak: her kontrolü ve ağırlığı inceleyin"], plan: "Ücretsiz CLI + Büyüme" },
+    ] as { icon: "local" | "store" | "team" | "ci"; title: string; who: string; ask: string; points: string[]; plan: string }[],
   },
-  market: {
-    kicker: "Piyasadan örnekler",
-    title: "Şu an neler oluyor?",
+  developers: {
+    title: "Geliştiriciler ve teknik ekipler için",
+    lead: "API, CLI ve CI. AGPL-3.0 ile açık kaynak.",
+    items: [
+      ["API ve CLI", "POST /api/audit JSON ya da Markdown döndürür."],
+      ["CI kapısı", "--min-score, puan düşerse yayını durdurur."],
+      ["Açık puanlama", "Her kontrol ve ağırlık depoda."],
+      ["Güvenli tasarım", "Özel ağlar engelli, istekler sınırlı, hiçbir şey saklanmaz."],
+      ["Kendi sunucunuzda", "Docker ile gelir. Ticari lisans mevcut."],
+    ] as [string, string][],
+  },
+  context: {
+    title: "Aramada neler değişiyor",
+    lead: "Kaynağına bağlı, yayımlanmış veriler.",
     items: [
       { fact: "Şubat 2026", title: "ChatGPT'ye reklam geldi", body: "ABD'de cevapların altında sponsorlu öneriler başladı. Organik olarak anılmak zorlaşıyor.", source: "Segwise, 2026", href: "https://segwise.ai/blog/chatgpt-ads-2026-guide.md" },
       { fact: "Shopify · Etsy", title: "Ürünler ChatGPT'de listeleniyor", body: "Bu platformların katalogları otomatik dahil; diğer mağazaların taranabilir sayfa ya da feed'e ihtiyacı var.", source: "Alhena, 2026", href: "https://alhena.ai/blog/chatgpt-shopping-product-feed-guide/" },
       { fact: "133'e 11", title: "Yerel cevapları yorumlar belirliyor", body: "Yapay zekâda görünen yerel işletmelerin ortalama 133, görünmeyenlerin 11 Google yorumu var.", source: "Insites, ABD'de 10.000 işletme", href: "https://www.insites.com/ai-whitepaper" },
       { fact: "%45", title: "Yerel aramada önce yapay zekâ", body: "Yerel öneri için yapay zekâ kullanan tüketici oranı. Bir yıl önce %6'ydı.", source: "BrightLocal, Local Falcon aracılığıyla", href: "https://www.localfalcon.com/blog/the-ai-visibility-crisis-why-83-percent-of-restaurants-dont-exist-in-chatgpt" },
-      { fact: "%2,2", title: "Cevaplar sürekli değişiyor", body: "Aynı soru üç kez sorulduğunda değişmeden kalan ChatGPT atıflarının oranı.", source: "Growth Memo × AirOps", href: "https://www.growth-memo.com/p/how-to-make-prompt-tracking-much" },
-      { fact: "1,8 milyar $", title: "Yatırımcılar bu alana inanıyor", body: "Sektör lideri Profound'un Eylül 2026 turundaki değerlemesi.", source: "Dealroom", href: "https://dealroom.co/charts/generative-engine-optimization-startups" },
-    ] as MarketItem[],
+    ] as ContextItem[],
   },
-  compare: {
-    kicker: "Neden Quovra",
-    title: "Çoğu araç sadece izler. Quovra doğru ölçer ve düzeltir.",
-    cols: ["Quovra", "Tipik izleme araçları", "ChatGPT'ye kendiniz sormak"],
-    rows: [
-      ["Teknik site denetimi", true, "Kısmen", false],
-      ["Yapıştırmaya hazır düzeltmeler", true, "Nadiren", "Genel tavsiye"],
-      ["Tekrarlı ölçüm + güven aralığı", true, "Tek ölçüm", false],
-      ["Türkçe ve İngilizce, 4 para birimi", true, "Çoğunlukla sadece İngilizce", "—"],
-      ["Başlangıç fiyatı", "Ücretsiz · ücretli ₺790 ya da $24", "$29–$500+", "Ücretsiz ama yavaş"],
-    ] as [string, Cell, Cell, Cell][],
-    note: "Herkese açık fiyat sayfaları ve 2026 araç incelemelerine dayanır.",
-  },
-  useCases: {
-    kicker: "Kimler için",
-    title: "Yapay zekânın karar verdiği işletmeler için",
-    items: [
-      { id: "ecom", label: "E-ticaret", title: "Ürünlerinizi AI alışveriş cevaplarına sokun", body: "Her ürün sayfasında ajanların karşılaştırdığı fiyat, stok, marka ve puan verisini kontrol ederiz.", q: "“1.000 TL altı en iyi koşu ayakkabısı?”" },
-      { id: "local", label: "Klinik, restoran, otel", title: "Yakındaki önerilen isim siz olun", body: "Hasta ve misafirlerinizin sorduğu soruları test eder, neyi düzeltmeniz gerektiğini söyleriz.", q: "“Kadıköy'de iyi bir implant kliniği?”" },
-      { id: "agency", label: "Ajanslar", title: "Her müşteriye GEO ekleyin", body: "Saniyeler içinde denetleyin, kendi markanızla rapor gönderin, ilerlemeyi rakamlarla gösterin.", q: "“İstanbul'da en iyi B2B SEO ajansı?”" },
-      { id: "saas", label: "SaaS ve B2B", title: "Kısa listeye girin", body: "Alıcılar alternatif sorduğunda yapay zekânın sizi anıp anmadığını takip edin.", q: "“Küçük ekip için Paraşüt alternatifleri?”" },
-    ],
-  },
-  future: {
-    kicker: "Sırada ne var",
-    title: "Yapay zekâ aramasının geleceğine hazır",
-    items: [
-      { tag: "Yayında", title: "Ajanla alışveriş", body: "AI alışveriş ajanları için ürün verisi kontrolü." },
-      { tag: "Yayında", title: "Ajanlar için Markdown", body: "llms.txt ve llms-full.txt kontrolleri." },
-      { tag: "Yakında", title: "AI bot analitiği", body: "Hangi AI ajanının hangi sayfayı okuduğunu görün." },
-      { tag: "Yakında", title: "Organik ve sponsorlu", body: "Anılmalarınızı ChatGPT reklamlarından ayrı izleyin." },
-    ],
+  references: {
+    title: "Referans projeler",
+    problem: "Sorun",
+    approach: "Yaklaşım",
+    result: "Sonuç",
   },
   pricing: {
     kicker: "Fiyatlar",
@@ -435,11 +587,11 @@ const tr: LandingDict = {
       { id: "free", name: "Ücretsiz", tagline: "Her siteyi, her zaman denetleyin", cta: "Ücretsiz denetle",
         highlights: ["Sınırsız tek sayfa denetimi", "10 sayfalık site taraması", "Hazır düzeltmeler", "Markdown ve PDF rapor, rozet"] },
       { id: "starter", name: "Başlangıç", tagline: "Tek işletme için", cta: "Erken erişime katıl",
-        highlights: ["1 site · 50 sayfa takibi", "30 müşteri sorusu", "ChatGPT + Gemini", "Güven aralıklı haftalık takip"] },
+        highlights: ["1 site · 50 sayfa takibi", "30 müşteri sorusu", "ChatGPT ve Claude", "Güven aralıklı haftalık takip"] },
       { id: "growth", name: "Büyüme", tagline: "Büyüyen markalar için", featured: true, cta: "Erken erişime katıl",
-        highlights: ["3 site · 300 sayfa", "100 müşteri sorusu", "4 yapay zekâ motoru", "Rakip takibi ve AI bot analitiği"] },
+        highlights: ["3 site · 300 sayfa", "100 müşteri sorusu", "En fazla 4 yapay zekâ motoru (planlı)", "Rakip takibi ve AI bot analitiği"] },
       { id: "agency", name: "Ajans", tagline: "Ajanslar ve ekipler için", cta: "Erken erişime katıl",
-        highlights: ["20 müşteri sitesi · 2.000 sayfa", "300 müşteri sorusu", "4 motor, kendi markanızla rapor", "API erişimi · 10 kullanıcı"] },
+        highlights: ["20 müşteri sitesi · 2.000 sayfa", "300 müşteri sorusu", "En fazla 4 motor (planlı), kendi markanızla rapor", "API erişimi · 10 kullanıcı"] },
     ] as Plan[],
     popular: "En popüler",
     tableTitle: "Paketleri karşılaştırın",
@@ -449,7 +601,7 @@ const tr: LandingDict = {
       ["Takip edilen site", "—", "1", "3", "20"],
       ["Haftalık takip edilen sayfa", "—", "50", "300", "2.000"],
       ["Takip edilen müşteri sorusu", "3 (tek seferlik demo)", "30", "100", "300"],
-      ["Yapay zekâ motoru", "1", "2", "4", "4 (Kurumsal'da daha fazla)"],
+      ["Yapay zekâ motoru", "1", "ChatGPT, Claude", "En fazla 4 (2 canlı, 2 planlı)", "En fazla 4 (2 canlı, 2 planlı)"],
       ["Ölçüm sıklığı", "Tek sefer", "Haftalık", "Haftalık", "Haftalık + istek üzerine"],
       ["Tekrarlı ölçüm + %95 güven aralığı", false, true, true, true],
       ["Takip edilen rakip", "—", "3", "10", "Site başına 25"],
@@ -468,20 +620,28 @@ const tr: LandingDict = {
   faq: {
     title: "Sık sorulan sorular",
     items: [
-      { q: "GEO nedir?", a: "İşletmenizin yapay zekâ asistanlarınca kolayca bulunmasını, anlaşılmasını ve önerilmesini sağlamak. SEO tıklama, GEO cevabın içinde anılma kazandırır." },
-      { q: "Neden ChatGPT'ye kendim sormuyorum?", a: "Cevaplar her seferinde değişir; tek cevap pek bir şey söylemez. Quovra soruları tekrarlar, güven aralığı verir ve sitenizi teknik olarak da denetler." },
-      { q: "Gerçek ChatGPT uygulamasını mı sorguluyorsunuz?", a: "Motorların resmi API'lerini kullanıyoruz. Sonuçlar uygulamadan farklı olabilir; bu yüzden yöntemi ve güven aralığını hep gösteriyoruz." },
-      { q: "GPTBot'u engellemek zarar verir mi?", a: "GPTBot eğitim içindir, engellemek makul bir tercih. OAI-SearchBot gibi arama botlarını engellemek ise sizi canlı cevaplardan çıkarır." },
-      { q: "Yurt dışındaki siteler için de çalışır mı?", a: "Evet. Quovra her dildeki herkese açık siteyi denetler; arayüz Türkçe ve İngilizce, ödeme USD, EUR, GBP veya TRY ile yapılabilir." },
-      { q: "Verilerim saklanıyor mu?", a: "Ücretsiz denetimler saklanmaz. Ücretli planlarda trend göstermek için sonuçlar tutulur, istediğiniz zaman silebilirsiniz." },
+      { q: "GEO nedir?", a: "Üretken Motor Optimizasyonu: sitenizin yapay zekâ asistanlarınca erişilebilir, ayrıştırılabilir ve alıntılanabilir olmasını sağlamak. SEO sonuç sayfasında sıra için, GEO cevabın içinde anılmak için yarışır." },
+      { q: "Neden ChatGPT'ye kendim sormuyorum?", a: "Tek cevap anekdottur. Aynı soru farklı cevaplar döndürür; bu yüzden Quovra her soruyu birkaç kez sorar ve güven aralığı raporlar. Teknik nedenleri de denetler: bot erişimi, işleme ve yapısal veri." },
+      { q: "Hangi yapay zekâ asistanlarını ölçüyorsunuz?", a: "Bugün ChatGPT (uygulamadaki gibi web aramalı) ve Claude; Gemini, Perplexity ve Google AI Overviews planlı. API üzerinden alınan cevaplar tüketici uygulamalarından biraz farklı olabilir; yöntem sayfası bunu belirtir." },
+      { q: "Teknik bilgim yok, yine de kullanabilir miyim?", a: "Evet. Rapor her bulguyu sade bir dille açıklar ve yapılacak değişikliği verir. Sitenizi yöneten kişiye iletebilir ya da kurulumu bize bırakabilirsiniz." },
+      { q: "GPTBot'u engellemek zarar verir mi?", a: "GPTBot eğitim verisi toplar; engellemek meşru bir lisans tercihidir ve 2 puana mal olur. OAI-SearchBot ya da ChatGPT-User gibi arama ve kullanıcı botlarını engellemek sizi canlı cevaplardan çıkarır ve 15 puana kadar mal olur." },
+      { q: "Kendi altyapımda çalıştırabilir miyim?", a: "Evet. Quovra AGPL-3.0 lisanslıdır ve Dockerfile ile gelir. Ücretsiz denetimler bellekte işlenir ve kalıcı saklanmaz. Değiştirilmiş sürümü ağ hizmeti olarak sunarsanız değişiklikleri yayımlamanız gerekir; ticari lisans mevcuttur." },
+      { q: "CI içinde kullanabilir miyim?", a: "Evet. CLI, puan --min-score değerinin altındaysa 1 koduyla çıkar; örneğin npm run audit -- example.com --min-score=70. Aynı denetim POST /api/audit olarak da kullanılabilir." },
     ],
   },
-  cta: { title: "Yapay zekâ sizin hakkınızda ne diyor?", body: "Ücretsiz, üyeliksiz, yaklaşık 10 saniye.", button: "Ücretsiz denetle" },
+  cta: {
+    or: "ya da",
+    secondary: "Düzeltmeleri bize bırakın",
+    title: "Yapay zekâ çağında görünür kalın.",
+    body: "Amacımız basit: müşteriniz bir asistana sorduğunda cevapta sizin adınız geçsin. Sitenizi ölçüyor, sizi geride bırakanı düzeltiyor ve sonucu kanıtlıyoruz.",
+    button: "Ücretsiz denetle",
+  },
   footer: {
-    tagline: "Yapay zekâ arama görünürlüğü, doğru ölçülmüş.",
+    tagline: "Yapay zekâ arama görünürlüğü için açık kaynak araç seti.",
     cols: [
-      { title: "Ürün", links: [["Ücretsiz denetim", "#top"], ["Fiyatlar", "#pricing"], ["Yöntem", "/tr/yontem"]] },
-      { title: "Şirket", links: [["GEO rehberi", "/tr/rehber"], ["Yatırımcılar", "/tr/yatirimci"], ["GitHub", "REPO"], ["English", "/"]] },
+      { title: "Ürün", links: [["Ücretsiz denetim", "/tr#top"], ["Ürün", "/tr/urun"], ["Kimin için", "/tr/kimin-icin"], ["Nasıl çalışır", "/tr/nasil-calisir"], ["Fiyatlar", "/tr/fiyatlar"]] },
+      { title: "Kaynaklar", links: [["GEO rehberi", "/tr/rehber"], ["Yöntem", "/tr/yontem"], ["Geliştiriciler", "/tr/gelistiriciler"], ["GitHub", "REPO"]] },
+      { title: "Şirket", links: [["Yatırımcılar", "/tr/yatirimci"], ["Softmain", "https://softmain.com.tr"], ["English", "/"]] },
     ],
     legal: "Açık kaynak GEO aracı · AGPL-3.0",
     madeBy: "Bir ürünüdür",

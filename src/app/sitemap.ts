@@ -1,34 +1,17 @@
 import type { MetadataRoute } from "next";
+import { ROUTES, type PageId } from "@/lib/routes";
 import { SITE_URL } from "@/lib/site";
 
+const PRIORITY: Partial<Record<PageId, number>> = { home: 1, product: 0.9, solutions: 0.9, pricing: 0.9, workflow: 0.8, developers: 0.7, guide: 0.7, method: 0.6, investors: 0.5 };
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const languages = { en: `${SITE_URL}/`, tr: `${SITE_URL}/tr` };
-  return [
-    { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1, alternates: { languages } },
-    { url: `${SITE_URL}/tr`, changeFrequency: "weekly", priority: 0.9, alternates: { languages } },
-    {
-      url: `${SITE_URL}/methodology`, changeFrequency: "monthly", priority: 0.6,
-      alternates: { languages: { en: `${SITE_URL}/methodology`, tr: `${SITE_URL}/tr/yontem` } },
-    },
-    {
-      url: `${SITE_URL}/tr/yontem`, changeFrequency: "monthly", priority: 0.6,
-      alternates: { languages: { en: `${SITE_URL}/methodology`, tr: `${SITE_URL}/tr/yontem` } },
-    },
-    {
-      url: `${SITE_URL}/guide`, changeFrequency: "monthly", priority: 0.7,
-      alternates: { languages: { en: `${SITE_URL}/guide`, tr: `${SITE_URL}/tr/rehber` } },
-    },
-    {
-      url: `${SITE_URL}/tr/rehber`, changeFrequency: "monthly", priority: 0.7,
-      alternates: { languages: { en: `${SITE_URL}/guide`, tr: `${SITE_URL}/tr/rehber` } },
-    },
-    {
-      url: `${SITE_URL}/investors`, changeFrequency: "monthly", priority: 0.5,
-      alternates: { languages: { en: `${SITE_URL}/investors`, tr: `${SITE_URL}/tr/yatirimci` } },
-    },
-    {
-      url: `${SITE_URL}/tr/yatirimci`, changeFrequency: "monthly", priority: 0.5,
-      alternates: { languages: { en: `${SITE_URL}/investors`, tr: `${SITE_URL}/tr/yatirimci` } },
-    },
-  ];
+  return (Object.keys(ROUTES) as PageId[]).flatMap((page) => {
+    const languages = { en: `${SITE_URL}${ROUTES[page].en}`, tr: `${SITE_URL}${ROUTES[page].tr}` };
+    return (["en", "tr"] as const).map((lang) => ({
+      url: languages[lang],
+      changeFrequency: page === "home" ? ("weekly" as const) : ("monthly" as const),
+      priority: (PRIORITY[page] ?? 0.5) - (lang === "tr" ? 0.05 : 0),
+      alternates: { languages },
+    }));
+  });
 }
