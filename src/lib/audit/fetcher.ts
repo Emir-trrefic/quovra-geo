@@ -69,13 +69,20 @@ export async function fetchPage(url: URL, opts: FetchOptions = {}): Promise<Page
 }
 
 /** Fetches a small text resource; returns null on any non-2xx or error. */
+/** True for an HTML document (a soft 404 or app shell), false for XML, Markdown or plain text. */
+export function looksLikeHtmlPage(body: string): boolean {
+  const head = body.trimStart().slice(0, 600).toLowerCase();
+  if (head.startsWith("<?xml") || head.startsWith("<urlset") || head.startsWith("<sitemapindex")) return false;
+  return /^<(!doctype html|html|head|body)\b/.test(head) || (head.includes("<html") && head.includes("<head"));
+}
+
 export async function fetchText(url: URL, opts: FetchOptions = {}): Promise<string | null> {
   try {
     const page = await fetchPage(url, { timeoutMs: 6_000, ...opts });
     if (page.status < 200 || page.status >= 300) return null;
-    const type = page.headers["content-type"] ?? "";
-    // Many sites answer unknown paths with their HTML shell (soft 404).
-    if (type.includes("text/html") || /^\s*<(!doctype|html)/i.test(page.html)) return null;
+    // Many sites answer unknown paths with their HTML shell (soft 404). Judge by the body, not the
+    // Content-Type: plenty of servers label a valid sitemap.xml or llms.txt as text/html.
+    if (looksLikeHtmlPage(page.html)) return null;
     return page.html;
   } catch {
     return null;

@@ -21,6 +21,14 @@ const SITEMAP = `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/sch
 </urlset>`;
 
 describe("sitemap", () => {
+  it("puts legal and utility pages after the pages that describe the business", () => {
+    const picked = pickPages(
+      ["https://a.test/kvkk", "https://a.test/de", "https://a.test/iletisim", "https://a.test/implant-tedavisi", "https://a.test/privacy-policy", "https://a.test/dis-beyazlatma"],
+      "https://a.test", [], 2,
+    );
+    expect(picked.sort()).toEqual(["https://a.test/dis-beyazlatma", "https://a.test/implant-tedavisi"]);
+  });
+
   it("parses urlsets and sitemap indexes", () => {
     expect(parseSitemap(SITEMAP).urls).toHaveLength(5);
     const index = parseSitemap("<sitemapindex><sitemap><loc>https://a.test/s1.xml</loc></sitemap></sitemapindex>");

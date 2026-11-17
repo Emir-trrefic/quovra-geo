@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FREE_PAGES, freeFixIds, toFreeView } from "@/lib/audit/freeView";
 import { toMarkdown } from "@/lib/audit/markdown";
 import type { AuditReport, Category } from "@/lib/audit/types";
 import type { Lang } from "@/lib/i18n";
 import { UI } from "@/lib/i18n/ui";
+import { href } from "@/lib/routes";
 import { CopyBlock } from "./CopyBlock";
+import { Icon } from "./Icon";
 import { LeadForm } from "./LeadForm";
 import { ProbePanel } from "./ProbePanel";
 import { ScoreMeter } from "./ScoreMeter";
@@ -13,8 +16,14 @@ import { ScoreMeter } from "./ScoreMeter";
 const ORDER = { fail: 0, warn: 1, pass: 2 } as const;
 type Tab = "fixes" | "pages" | "bots" | "files" | "probe";
 
-export function Report({ report, lang }: { report: AuditReport; lang: Lang }) {
+export function Report({ report: full, lang }: { report: AuditReport; lang: Lang }) {
   const t = UI[lang].report;
+  const lock = t.lock;
+  const plans = href("pricing", lang);
+  // The free report: every score and finding, fixes for the top issues only. See lib/audit/freeView.
+  const report = toFreeView(full);
+  const openFixes = freeFixIds(full);
+  const hiddenPages = Math.max(0, (full.pages?.length ?? 0) - FREE_PAGES);
   const [tab, setTab] = useState<Tab>("fixes");
   const [printing, setPrinting] = useState(false);
   const [shared, setShared] = useState(false);
@@ -36,7 +45,6 @@ export function Report({ report, lang }: { report: AuditReport; lang: Lang }) {
   );
   const issues = checks.filter((c) => c.status !== "pass").length;
   const host = new URL(report.finalUrl).hostname;
-  const siteOrigin = new URL(report.finalUrl).origin;
   const badgeUrl = `${origin}/api/badge?url=${encodeURIComponent(host)}`;
   const reportUrl = `${origin}${lang === "tr" ? "/tr" : "/"}?url=${encodeURIComponent(host)}`;
   const show = (id: Tab) => printing || tab === id;
@@ -52,7 +60,7 @@ export function Report({ report, lang }: { report: AuditReport; lang: Lang }) {
 
   const tabs: [Tab, string][] = [
     ["fixes", `${t.tabs.fixes} (${report.checks.length})`],
-    ...(report.pages?.length ? [["pages", `${t.tabs.pages} (${report.pages.length + 1})`] as [Tab, string]] : []),
+    ...(full.pages?.length ? [["pages", `${t.tabs.pages} (${full.pages.length + 1})`] as [Tab, string]] : []),
     ["bots", t.tabs.bots],
     ["files", t.tabs.files],
     ["probe", t.tabs.probe],
@@ -101,13 +109,18 @@ export function Report({ report, lang }: { report: AuditReport; lang: Lang }) {
 
       {show("fixes") && (
         <div className="card list">
+          {openFixes.size > 0 && <p className="free-note no-print">{lock.freeFixes(openFixes.size)}</p>}
           {checks.map((c) => (
             <div className="check" key={c.id}>
               <span className={`pill ${c.status}`}>{t.status[c.status]}</span>
               <div>
                 <h4>{c.title}</h4>
                 <p>{c.detail}</p>
-                {c.fix && <p className="fix"><strong>{t.fix} →</strong> {c.fix}</p>}
+                {c.fix ? (
+                  <p className="fix"><strong>{t.fix} →</strong> {c.fix}</p>
+                ) : c.status !== "pass" && (
+                  <p className="fix locked"><Icon name="lock" size={14} /> {lock.fix} <a href={plans}>{lock.seePlans}</a></p>
+                )}
               </div>
               <span className="pts">{c.score}/{c.weight}</span>
             </div>
@@ -115,7 +128,7 @@ export function Report({ report, lang }: { report: AuditReport; lang: Lang }) {
         </div>
       )}
 
-      {show("pages") && report.pages?.length ? (
+      {show("pages") && full.pages?.length ? (
         <div className="card list table-wrap print-gap">
           <table>
             <thead><tr><th>{t.pages.page}</th><th>{t.pages.score}</th><th>{t.pages.issues}</th></tr></thead>
@@ -125,13 +138,18 @@ export function Report({ report, lang }: { report: AuditReport; lang: Lang }) {
                 <td><span className={`pill ${gradeClass(report.score)}`}>{report.score} · {report.grade}</span></td>
                 <td className="muted">{checks.filter((c) => c.status === "fail").slice(0, 3).map((c) => c.title).join(" · ") || t.pages.none}</td>
               </tr>
-              {[...report.pages].sort((a, b) => a.score - b.score).map((p) => (
+              {[...(report.pages ?? [])].sort((a, b) => a.score - b.score).map((p) => (
                 <tr key={p.url}>
                   <td className="url-cell">{p.url}</td>
                   <td>{p.status ? <span className={`pill ${gradeClass(p.score)}`}>{p.score} · {p.grade}</span> : <span className="pill fail">{t.pages.unreachable}</span>}</td>
                   <td className="muted">{p.issues.slice(0, 3).join(" · ") || t.pages.none}</td>
                 </tr>
               ))}
+              {hiddenPages > 0 && (
+                <tr className="locked-row">
+                  <td colSpan={3}><Icon name="lock" size={14} /> {lock.pagesMore(hiddenPages)} · <a href={plans}>{lock.seePlans}</a></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -159,8 +177,18 @@ export function Report({ report, lang }: { report: AuditReport; lang: Lang }) {
 
       {show("files") && (
         <div className="grid print-gap">
-          <CopyBlock title="llms.txt" hint={t.files.llms(siteOrigin)} code={report.generated.llmsTxt} labels={t} />
-          <CopyBlock title="Organization JSON-LD" hint={t.files.jsonld} code={report.generated.jsonLd} labels={t} />
+          <div className="card locked-files">
+            <div className="locked-preview" aria-hidden>
+              <pre>{full.generated.llmsTxt.split("\n").slice(0, 6).join("\n")}</pre>
+            </div>
+            <div className="locked-cta">
+              <span className="lock-badge"><Icon name="lock" size={14} /> {lock.badge}</span>
+              <h3>{lock.filesTitle}</h3>
+              <p>{lock.filesBody}</p>
+              <p className="muted small">llms.txt · Organization JSON-LD</p>
+              <a className="btn small" href={plans}>{lock.seePlans}</a>
+            </div>
+          </div>
           <CopyBlock title="robots.txt" hint={t.files.robots} code={report.generated.robotsTxt} labels={t} />
           {origin && (
             <CopyBlock

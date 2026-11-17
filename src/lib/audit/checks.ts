@@ -14,10 +14,28 @@ export interface CheckContext {
 
 type Check = (ctx: CheckContext, m: CheckMessages) => CheckResult;
 
+/**
+ * Schema.org types that state who a business is. Sites rarely use plain Organization: clinics use
+ * MedicalOrganization or Dentist, hotels Hotel, shops Store, and so on, so the common subtypes count too.
+ */
+const ORG_TYPES = new Set([
+  "Organization", "Corporation", "LocalBusiness", "OnlineBusiness", "OnlineStore", "NGO", "EducationalOrganization",
+  "MedicalOrganization", "MedicalBusiness", "MedicalClinic", "Hospital", "Dentist", "Physician", "Pharmacy",
+  "DiagnosticLab", "VeterinaryCare", "HealthAndBeautyBusiness", "BeautySalon", "DaySpa", "HairSalon",
+  "LegalService", "Attorney", "Notary", "AccountingService", "FinancialService", "InsuranceAgency", "RealEstateAgent",
+  "ProfessionalService", "HomeAndConstructionBusiness", "AutomotiveBusiness", "AutoDealer", "AutoRepair",
+  "FoodEstablishment", "Restaurant", "CafeOrCoffeeShop", "Bakery", "BarOrPub", "FastFoodRestaurant",
+  "LodgingBusiness", "Hotel", "Motel", "Resort", "BedAndBreakfast", "Hostel",
+  "Store", "ClothingStore", "ElectronicsStore", "FurnitureStore", "GroceryStore", "BookStore", "JewelryStore",
+  "SportsActivityLocation", "ExerciseGym", "TravelAgency", "EmploymentAgency", "School", "CollegeOrUniversity",
+]);
+export const isOrgType = (t: string) => ORG_TYPES.has(t);
+
 const RICH_TYPES = [
-  "Organization", "LocalBusiness", "Corporation", "WebSite", "Article", "BlogPosting",
-  "NewsArticle", "Product", "SoftwareApplication", "FAQPage", "HowTo", "Person", "Service",
+  "WebSite", "Article", "BlogPosting", "NewsArticle", "Product", "SoftwareApplication", "FAQPage",
+  "HowTo", "Person", "Service", "MedicalProcedure", "Review", "AggregateRating", "Event", "Course",
 ];
+const isRichType = (t: string) => isOrgType(t) || RICH_TYPES.includes(t);
 
 function result(
   id: string, category: Category, title: string, weight: number,
@@ -85,7 +103,7 @@ const indexable: Check = ({ $, page }, { indexable: m }) => {
 
 const structuredData: Check = ({ $ }, { structured: m }) => {
   const types = schemaTypes(jsonLdNodes($));
-  const rich = types.filter((t) => RICH_TYPES.includes(t));
+  const rich = types.filter(isRichType);
   return result(
     "structured-data", "structure", m.title, 10,
     types.length === 0 ? 0 : 0.4 + Math.min(rich.length, 3) * 0.2,
@@ -192,7 +210,7 @@ const authorship: Check = ({ $ }, { authorship: m }) => {
   const n = [
     !!meta($, "author") || $('[rel="author"]').length > 0,
     types.includes("Person"),
-    types.some((t) => ["Organization", "LocalBusiness", "Corporation"].includes(t)),
+    types.some(isOrgType),
   ].filter(Boolean).length;
   return result("authorship", "trust", m.title, 4, n / 2, m.detail({ n }), m.fix);
 };

@@ -1,18 +1,21 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { availableEngines, engineById, probeEnabled, ProbeEngineError, runProbe } from "@/lib/probe";
+import { availableEngines, engineById, probeEnabled, probePublic, ProbeEngineError, runProbe } from "@/lib/probe";
 import { clientKey, rateLimit } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 export async function GET() {
-  return NextResponse.json({ enabled: probeEnabled(), engines: availableEngines() });
+  return NextResponse.json({ enabled: probeEnabled() && probePublic(), engines: probePublic() ? availableEngines() : [] });
 }
 
 export async function POST(req: Request) {
   if (!probeEnabled()) {
     return NextResponse.json({ error: "The AI Mention Probe is not configured on this server." }, { status: 503 });
+  }
+  if (!probePublic()) {
+    return NextResponse.json({ error: "The AI Mention Probe is available on paid plans." }, { status: 403 });
   }
   if (!rateLimit(`probe:${clientKey(req)}`, 5).ok) {
     return NextResponse.json({ error: "Hourly probe limit reached." }, { status: 429 });

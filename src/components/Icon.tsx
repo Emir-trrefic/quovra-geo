@@ -8,6 +8,7 @@ const PATHS = {
   store: <><path d="M4 9l1.5-5h13L20 9" /><path d="M4 9h16v2a2.7 2.7 0 0 1-5.3 0 2.7 2.7 0 0 1-5.4 0A2.7 2.7 0 0 1 4 11z" /><path d="M5.5 13.5V20h13v-6.5M10 20v-4h4v4" /></>,
   team: <><circle cx="9" cy="8.5" r="3" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><circle cx="17" cy="9.5" r="2.4" /><path d="M15.5 14.3A4.6 4.6 0 0 1 21 19" /></>,
   check: <path d="M5 12.5l4.2 4.2L19 7" />,
+  lock: <><rect x="5" y="10.5" width="14" height="10" rx="2" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" /></>,
 } as const;
 
 export type IconName = keyof typeof PATHS;

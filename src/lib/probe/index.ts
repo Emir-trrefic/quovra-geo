@@ -99,6 +99,14 @@ export function probeEnabled(): boolean {
   return availableEngines().length > 0;
 }
 
+/**
+ * Whether anonymous visitors may run the probe on this server. Each run costs API credit, so the
+ * public site keeps it off (it is a paid feature) unless QUOVRA_PROBE_PUBLIC=1, e.g. for local tests.
+ */
+export function probePublic(): boolean {
+  return process.env.QUOVRA_PROBE_PUBLIC === "1";
+}
+
 /** Returns the requested engine, or the first configured one when none is requested. */
 export function engineById(id?: string): ProbeEngine {
   const available = availableEngines();

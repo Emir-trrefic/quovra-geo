@@ -51,12 +51,10 @@ export function toMarkdown(r: AuditReport): string {
     for (const p of r.pages) out.push(`| ${p.url} | ${p.status ? `${p.score} (${p.grade})` : "–"} | ${p.issues.slice(0, 3).join("; ")} |`);
     out.push("");
   }
-  out.push(
-    `## ${t.files}`, "",
-    "### llms.txt", "", "```markdown", r.generated.llmsTxt.trimEnd(), "```", "",
-    "### JSON-LD", "", "```html", r.generated.jsonLd, "```", "",
-    "### robots.txt", "", "```", r.generated.robotsTxt.trimEnd(), "```", "",
-    "---", `_${t.footer}_`, "",
-  );
+  // Sections left empty (as in the free report) are omitted rather than printed as empty blocks.
+  out.push(`## ${t.files}`, "");
+  if (r.generated.llmsTxt) out.push("### llms.txt", "", "```markdown", r.generated.llmsTxt.trimEnd(), "```", "");
+  if (r.generated.jsonLd) out.push("### JSON-LD", "", "```html", r.generated.jsonLd, "```", "");
+  out.push("### robots.txt", "", "```", r.generated.robotsTxt.trimEnd(), "```", "", "---", `_${t.footer}_`, "");
   return out.join("\n");
 }
